@@ -35,8 +35,7 @@
                 return;
             }
         }
-    
-    
+                                 
         private function validateFirstName($fn) {
             if(strlen($fn) > 25 || strlen($fn) < 2){
                 array_push($this->errorArray, Constants::$validateFirstNameCharacters);
