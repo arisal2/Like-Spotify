@@ -41,6 +41,7 @@
             <h2>Create your free account</h2>
             <p>
                 <?php echo $account->getError(Constants::$validateUserNameCharacters); ?> 
+                <?php echo $account->getError(Constants::$userNameTaken); ?> 
                 <label for="username">Username</label>
                 <input id="username" name="username" type="text" placeholder="e.g. arisal2"  value="<?php getInputValue('username')?>" required>
             </p>

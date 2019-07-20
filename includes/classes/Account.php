@@ -45,6 +45,12 @@
                 array_push($this->errorArray, Constants::$validateUserNameCharacters);
                 return;
             }
+
+            $checkUserNameQuery = mysqli_query($this->con,"SELECT username from users WHERE username = '$un'");
+            if(mysqli_num_rows($checkUserNameQuery)!= 0){
+                array_push($this->errorArray,Constants::$userNameTaken);
+                return;
+            }
         }
                                  
         private function validateFirstName($fn) {
