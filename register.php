@@ -1,3 +1,13 @@
+<?php   
+    if(isset($_POST['loginButton'])) {
+        //login button was pressed
+    }
+
+    if(isset($_POST['registerButton'])) {
+        //login button was pressed
+    }
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,7 +43,7 @@
             </p>
             <p>
                 <label for="lastName">Last name</label>
-                <input id="lastName" name="lastName" type="text" placeholder="e.g. Abhinav"  required>
+                <input id="lastName" name="lastName" type="text" placeholder="e.g. Risal"  required>
             </p>
             <p>
                 <label for="email">Email</label>
