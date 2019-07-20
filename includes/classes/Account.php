@@ -77,6 +77,12 @@
                 array_push($this->errorArray, Constants::$emailInvalid);
                 return;
             }
+
+            $checEmailQuery = mysqli_query($this->con,"SELECT email from users WHERE email = '$em'");
+            if(mysqli_num_rows($checkEmailQuery)!= 0){
+                array_push($this->errorArray,Constants::$emailTaken);
+                return;
+            }
         }
 
         private function validatePasswords($pw, $pw2) {
