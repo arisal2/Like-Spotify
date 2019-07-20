@@ -13,6 +13,19 @@
             $this->validateLastName($ln);
             $this->validateEmails($em,$em2);
             $this->validatePasswords($pw,$pw2);
+
+            if(empty($this->errorArray) == true) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        public function getError($error){
+            if(!in_array($error, $this->errorArray)){
+                $error = "";
+            }
+            return "<span class='errorMessage'>$error</span>";
         }
 
     
@@ -30,7 +43,6 @@
                 return;
             }
         }
-    
     
         private function validateLastName($ln) {
             if(strlen($ln) > 25 || strlen($ln) < 2){
@@ -50,8 +62,7 @@
                 return;
             }
         }
-    
-    
+
         private function validatePasswords($pw, $pw2) {
             if($pw != $pw2) {
                 array_push($this->errorArray, "Your passwords don't match");
