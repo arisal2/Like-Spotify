@@ -1,11 +1,43 @@
 <?php   
+
+    function sanitizeFormUsername($inputText){
+        $inputText = strip_tags($inputText);
+        $inputText = str_replace(" ", "", $inputText);
+        return $inputText;
+    }
+
+    function sanitizeFormString($inputText){
+        $inputText = strip_tags($inputText);
+        $inputText = str_replace(" ", "", $inputText);
+        $inputText = ucfirst(strtolower($inputText));
+        return $inputText;
+    }
+
+    function sanitizeFormPassword($inputText){
+        $inputText = strip_tags($inputText);
+        return $inputText;
+    }
+
     if(isset($_POST['loginButton'])) {
-        //login button was pressed
+        //login pressed
     }
 
     if(isset($_POST['registerButton'])) {
-        //login button was pressed
+        $username = sanitizeFormUsername($_POST['username']);
+        
+        $firstName = sanitizeFormString($_POST['firstName']);
+        
+        $lastName = sanitizeFormString($_POST['lastName']);
+        
+        $email = sanitizeFormString($_POST['email']);
+        
+        $email2 = sanitizeFormString($_POST['email2']);
+        
+        $password = sanitizeFormPassword($_POST['password']);
+        
+        $password2 = sanitizeFormPassword($_POST['password2']);
     }
+    
 ?>
 
 <!DOCTYPE html>
@@ -58,11 +90,14 @@
                 <input id="password" name="password" type="password" placeholder="Your Password" required>
             </p>
             <p>
-                <label for="password2">Confirm Password</label>
-                <input id="password2" name="password2" type="password" placeholder="Your Password" required>
+            <label for="password2">Confirm Password</label>
+            <input id="password2" name="password2" type="password" placeholder="Your Password" required>
             </p>
+
             <button type="submit" name="registerButton">SIGN UP</button>
         </form>
-    </div>
-</body>
+    </body>
 </html>
+      
+
+   
