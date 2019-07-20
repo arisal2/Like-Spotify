@@ -30,6 +30,19 @@
             return "<span class='errorMessage'>$error</span>";
         }
 
+        public function login($un, $pw){
+            $encryptedPassword = md5($pw);
+            $query = mysqli_query($this->con, "SELECT * FROM users where username='$un' AND password='$encryptedPassword'");
+
+            if(mysqli_num_rows($query) == 1){
+                return true;
+            }
+            else{
+                array_push($this->errorArray,Constants::$loginFailed);
+                return false;
+            }
+        }
+
         private function insertUserDetails($un, $fm, $ln, $em, $pw){
             $encryptedPassword = md5($pw);
             $profilePicture = "assets/images/profile-pics/images.png";
@@ -78,7 +91,7 @@
                 return;
             }
 
-            $checEmailQuery = mysqli_query($this->con,"SELECT email from users WHERE email = '$em'");
+            $checkEmailQuery = mysqli_query($this->con,"SELECT email from users WHERE email = '$em'");
             if(mysqli_num_rows($checkEmailQuery)!= 0){
                 array_push($this->errorArray,Constants::$emailTaken);
                 return;

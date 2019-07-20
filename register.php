@@ -37,6 +37,8 @@
             <button type="submit" name="loginButton">LOG IN</button>
         </form>
 
+        <?php echo $account->getError(Constants::$loginFailed); ?>
+
         <form id="RegistrationForm" action="register.php" method="POST">
             <h2>Create your free account</h2>
             <p>
