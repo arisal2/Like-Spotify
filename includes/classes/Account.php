@@ -1,5 +1,8 @@
 <?php
     class Account {
+
+        private $errorArray;
+
         public function __construct() {
             $this->errorArray = array();
         }
