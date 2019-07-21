@@ -26,14 +26,14 @@
     <script src="assets/js/register.js"></script>
 </head>
 <body>
-    
+
     <?php
     if(isset($_POST['registerButton'])){
         echo ' <script>
         $(document).ready(function () {
                 
-                $("#loginForm").show();
-                $("#registrationForm").hide();
+                $("#loginForm").hide();
+                $("#registrationForm").show();
         });
     </script>';
     } 
@@ -41,8 +41,8 @@
         echo ' <script>
         $(document).ready(function () {
                 
-                $("#loginForm").hide();
-                $("#registrationForm").show();
+                $("#loginForm").show();
+                $("#registrationForm").hide();
         });
     </script>';
     }
@@ -53,6 +53,8 @@
             <div id="inputContainer">
                 <form id="loginForm" action="register.php" method="POST">
                     <h2>Login to your account</h2>
+
+                    <?php echo $account->getError(Constants::$loginFailed); ?>
                     <p>
                         <label for="loginUsername">Username</label>
                         <input id="loginUsername" name="loginUsername" type="text" placeholder="e.g. arisal2" required>
@@ -68,7 +70,6 @@
                     </div>    
                 </form>
 
-                <?php echo $account->getError(Constants::$loginFailed); ?>
 
                 <form id="registrationForm" action="register.php" method="POST">
                     <h2>Create your free account</h2>
@@ -97,7 +98,7 @@
                     </p>
                     <p>
                         <label for="email2">Confirm email</label>
-                        hide   <input id="email2" name="email2" type="email" placeholder="e.g. abhinavrisal99@gmail.com"  value="<?php getInputValue('email2')?>" required>
+                        <input id="email2" name="email2" type="email" placeholder="e.g. abhinavrisal99@gmail.com"  value="<?php getInputValue('email2')?>" required>
                     </p>
                     <p>
                         <?php echo $account->getError(Constants::$passwordsDoNotMatch); ?>
