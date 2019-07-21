@@ -22,8 +22,18 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Welcome to Clonify</title>
     <link rel="stylesheet" type="text/css" href="assets/css/register.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="assets/js/register.js"></script>
 </head>
 <body>
+
+    <script>
+        $(document).ready(function () {
+                $("#loginForm").show();
+                $("#registrationForm").hide();
+        });
+    </script>
+
     <div id="background">
         <div id="loginContainer">
             <div id="inputContainer">
@@ -46,7 +56,7 @@
 
                 <?php echo $account->getError(Constants::$loginFailed); ?>
 
-                <form id="RegistrationForm" action="register.php" method="POST">
+                <form id="registrationForm" action="register.php" method="POST">
                     <h2>Create your free account</h2>
                     <p>
                         <?php echo $account->getError(Constants::$validateUserNameCharacters); ?> 
@@ -73,7 +83,7 @@
                     </p>
                     <p>
                         <label for="email2">Confirm email</label>
-                        <input id="email2" name="email2" type="email" placeholder="e.g. abhinavrisal99@gmail.com"  value="<?php getInputValue('email2')?>" required>
+                        hide   <input id="email2" name="email2" type="email" placeholder="e.g. abhinavrisal99@gmail.com"  value="<?php getInputValue('email2')?>" required>
                     </p>
                     <p>
                         <?php echo $account->getError(Constants::$passwordsDoNotMatch); ?>
