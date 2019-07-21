@@ -1,9 +1,11 @@
 <?php
     class Account {
 
+        private $con;
         private $errorArray;
 
-        public function __construct() {
+        public function __construct($con) {
+            $this->con = $con;
             $this->errorArray = array();
         }
         
@@ -15,7 +17,7 @@
             $this->validatePasswords($pw,$pw2);
 
             if(empty($this->errorArray) == true) {
-                return true;
+                return $this->insertUserDetails($un, $fm, $ln, $em, $pw);
             } else {
                 return false;
             }
@@ -28,15 +30,42 @@
             return "<span class='errorMessage'>$error</span>";
         }
 
+        public function login($un, $pw){
+            $encryptedPassword = md5($pw);
+            $query = mysqli_query($this->con, "SELECT * FROM users where username='$un' AND password='$encryptedPassword'");
+
+            if(mysqli_num_rows($query) == 1){
+                return true;
+            }
+            else{
+                array_push($this->errorArray,Constants::$loginFailed);
+                return false;
+            }
+        }
+
+        private function insertUserDetails($un, $fm, $ln, $em, $pw){
+            $encryptedPassword = md5($pw);
+            $profilePicture = "assets/images/profile-pics/images.png";
+            $date = date("Y-m-d");
+            $result = mysqli_query($this->con,"INSERT INTO users VALUES (NULL,'$un','$fm','$ln','$em','$encryptedPassword','$date','$profilePicture')");
+        
+            return $result;
+        }
+
     
         private function validateUsername($un) {
             if(strlen($un) > 25 || strlen($un) < 5){
                 array_push($this->errorArray, Constants::$validateUserNameCharacters);
                 return;
             }
+
+            $checkUserNameQuery = mysqli_query($this->con,"SELECT username from users WHERE username = '$un'");
+            if(mysqli_num_rows($checkUserNameQuery)!= 0){
+                array_push($this->errorArray,Constants::$userNameTaken);
+                return;
+            }
         }
-    
-    
+                                 
         private function validateFirstName($fn) {
             if(strlen($fn) > 25 || strlen($fn) < 2){
                 array_push($this->errorArray, Constants::$validateFirstNameCharacters);
@@ -59,6 +88,12 @@
 
             if(!filter_var($em, FILTER_VALIDATE_EMAIL)){
                 array_push($this->errorArray, Constants::$emailInvalid);
+                return;
+            }
+
+            $checkEmailQuery = mysqli_query($this->con,"SELECT email from users WHERE email = '$em'");
+            if(mysqli_num_rows($checkEmailQuery)!= 0){
+                array_push($this->errorArray,Constants::$emailTaken);
                 return;
             }
         }
