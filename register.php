@@ -26,14 +26,28 @@
     <script src="assets/js/register.js"></script>
 </head>
 <body>
-
-    <script>
+    
+    <?php
+    if(isset($_POST['registerButton'])){
+        echo ' <script>
         $(document).ready(function () {
+                
                 $("#loginForm").show();
                 $("#registrationForm").hide();
         });
-    </script>
+    </script>';
+    } 
+    else {
+        echo ' <script>
+        $(document).ready(function () {
+                
+                $("#loginForm").hide();
+                $("#registrationForm").show();
+        });
+    </script>';
+    }
 
+    ?>
     <div id="background">
         <div id="loginContainer">
             <div id="inputContainer">
