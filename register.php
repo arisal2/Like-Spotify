@@ -122,7 +122,7 @@
 
             <div id="loginText">
                 <h1>Get great music, right now</h1>
-                <h1>Listen to loads of songs for free</h1>
+                <h2>Listen to loads of songs for free</h1>
                 <ul>
                     <li>Discover music you will fall in live with</li>
                     <li>Create your own playlist</li>
