@@ -4,7 +4,7 @@ $(document).ready(function () {
         $("#registrationForm").show();
     })
 
-    $(".#hideRegister").click(function () {
+    $("#hideRegister").click(function () {
         $("#loginForm").show();
         $("#registrationForm").hide();
     })

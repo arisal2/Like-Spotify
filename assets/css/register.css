@@ -106,6 +106,7 @@ html, body{
     text-align: center;
 }
 
-#registerForm {
+#registrationForm,
+#loginForm {
     display:none;
 }
