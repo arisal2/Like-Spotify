@@ -38,6 +38,10 @@
                         <input id="loginPassword" name="loginPassword" type="password" required>
                     </p>
                     <button type="submit" name="loginButton">LOG IN</button>
+                
+                    <div class="hasAccountText">
+                        <span id="hideLogin">Don't have an account yet? Signup here.</span>
+                    </div>    
                 </form>
 
                 <?php echo $account->getError(Constants::$loginFailed); ?>
@@ -84,6 +88,10 @@
                     </p>
 
                     <button type="submit" name="registerButton">SIGN UP</button>
+
+                    <div class="hasAccountText">
+                        <span id="hideRegister">Already have an account? Log in here.</span>
+                    </div>   
                 </form>
             </div>
         </div>

@@ -81,14 +81,27 @@ html, body{
 }
 
 #inputContainer button{
-background-color: transparent;
-border: 2px solid #ffffff;
-border-radius: 250px;
-color:  #ffffff;
-display: block;
-font-size: 14px;
-letter-spacing: 2px;
-margin: 20px auto;
-height: 41px;
-width: 100%
+    background-color: transparent;
+    border: 2px solid #ffffff;
+    border-radius: 250px;
+    color:  #ffffff;
+    display: block;
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin: 20px auto;
+    height: 41px;
+    width: 100%
+}
+
+#inputContainer button:hover{
+    cursor: pointer;
+}
+
+.hasAccountText span{
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.hasAccountText {
+    text-align: center;
 }
