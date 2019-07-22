@@ -36,11 +36,10 @@ html, body {
     width: 100%
 }
 
-.playerControls button {
+.playerControls .buttons {
     margin: 0 auto;
     display: table;
 }
-
 
 .controlButton {
     background-color: transparent;
@@ -51,4 +50,14 @@ html, body {
 .controlButton img {
     width: 20px;
     height: 20px;
+}
+
+.controlButton.play img,
+.controlButton.pause img{
+    width: 32px;
+    height: 32px;
+}
+
+.controlButton:hover{
+    cursor: pointer;
 }
