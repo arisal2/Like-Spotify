@@ -22,7 +22,11 @@ else {
             </div>
             <div id="nowPlayingCenter">
                 <div class="content playerControls">
-                    
+                    <div class="buttons">
+                        <button class="controlButton shuffle" title="Shuffle button">
+                            <img src="assets/images/icons/shuffle.png" alt="Shuffle">
+                        </button>
+                    </div>
                 </div>
             </div>
             <div id="nowPlayingRight">
