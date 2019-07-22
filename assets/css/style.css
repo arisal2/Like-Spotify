@@ -1,10 +1,10 @@
-html, body{
+html, body {
     padding: 0;
     margin: 0;
     height: 100%;
 }
 
-#nowPlayingbarContainer{
+#nowPlayingbarContainer {
     background-color: #282828;
     width: 100%;
     min-width: 620px;
@@ -12,7 +12,7 @@ html, body{
     bottom: 0;
 }
 
-#nowPlayingbar{
+#nowPlayingbar {
     display: flex;
     height: 90px;
     padding:16px;
@@ -20,15 +20,18 @@ html, body{
 }
 
 #nowPlayingLeft,
-#nowPlayingRight{
+#nowPlayingRight {
     width: 30%;
     min-width: 100px;
 }
 
-#nowPlayingCenter{
+#nowPlayingCenter {
     width: 40%;
     max-width: 700px;
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+#nowPlayingBar .content {
+    width: 100%
 }
