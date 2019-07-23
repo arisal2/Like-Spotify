@@ -21,7 +21,15 @@ $path = "assets/images/icons/";
     <div id="mainContainer">
 
         <div id="topContainer">
-            
+
+            <div id="navBarContainer">
+                <nav class="navBar">
+                    <a href="index.php" class="logo">
+                        <img src="<?php echo $path ?>music.png" alt="">
+                    </a>
+                </nav>
+            </div>
+
         </div>
     
         <div id="nowPlayingBarContainer">

@@ -148,3 +148,10 @@ body {
     min-height: 100%;
     width: 100%;
 }
+
+#navBarContainer {
+    background-color: black;
+    width: 200px;
+    height: 100vh;
+    position: fixed;
+}
