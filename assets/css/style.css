@@ -32,6 +32,7 @@ html, body {
     flex-direction: column;
     align-items: center;
 }
+
 #nowPlayingBar .content {
     width: 100%
 }
@@ -53,11 +54,47 @@ html, body {
 }
 
 .controlButton.play img,
-.controlButton.pause img{
+.controlButton.pause img {
     width: 32px;
     height: 32px;
 }
 
-.controlButton:hover{
+.controlButton:hover {
     cursor: pointer;
+}
+
+.progressTime {
+    color: #a0a0a0;
+    font-size: 11px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.playbackBar {
+    display: flex;
+}
+
+.progressBar {
+    width: 100%;
+    height: 12px;
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.progressBarBg {
+    background-color: #404040;
+    height: 4px;
+    width: 100%;
+    border-radius: 2px;
+}
+
+.progress {
+    background-color: #a0a0a0;
+    height: 4px;
+    width: 0;
+    border-radius: 2px;
+}
+
+.playbackBar .progressBar {
+    margin-top: 3px;
 }
