@@ -21,6 +21,22 @@ else {
 
             <div id="nowPlayingLeft">
 
+                <div class="content">
+                    <span class="albumLink">
+                        <img src="http://clipart-library.com/img/2008830.jpg" class="albumArtWork">
+                    </span>
+
+                    <div class="trackInfo">
+                        <span class="trackName">
+                            <span>Name</span>
+                        </span>
+                        <span class="artistName">
+                            <span>Abhinav</span>
+                        </span>
+                    </div>
+
+                </div>
+
             </div>
 
             <div id="nowPlayingCenter">
@@ -56,7 +72,7 @@ else {
                                 <div class="progress">
 
                                 </div>
-                                
+
                             </div>
                             
                             
