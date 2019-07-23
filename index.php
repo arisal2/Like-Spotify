@@ -31,7 +31,9 @@ $path = "assets/images/icons/";
                     <div class="group">
 
                         <div class="navItem">
-                            <a href="search.php" class="navItemLink">Search</a>
+                            <a href="search.php" class="navItemLink">Search
+                                <img src="<?php echo $path ?>search.png" alt="Search" class="icon">
+                            </a>
                         </div>
 
                     </div>
