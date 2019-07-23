@@ -28,10 +28,10 @@ else {
 
                     <div class="trackInfo">
                         <span class="trackName">
-                            <span>Name</span>
+                            <span>Schism</span>
                         </span>
                         <span class="artistName">
-                            <span>Abhinav</span>
+                            <span>Tool</span>
                         </span>
                     </div>
 
