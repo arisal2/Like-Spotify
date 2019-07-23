@@ -154,4 +154,13 @@ body {
     width: 200px;
     height: 100vh;
     position: fixed;
+    top: 0;
+    left: 0;
+}
+
+.navBar {
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    -ms-flex-direction: column;
 }
