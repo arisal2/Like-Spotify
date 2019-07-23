@@ -38,13 +38,13 @@ $path = "assets/images/icons/";
                     
                     <div class="group">
                         <div class="navItem">
-                            <a href="search.php" class="navItemLink">Browse</a>
+                            <a href="browse.php" class="navItemLink">Browse</a>
                         </div>
                         <div class="navItem">
-                            <a href="search.php" class="navItemLink">Your Music</a>
+                            <a href="yourmusic.php" class="navItemLink">Your Music</a>
                         </div>
                         <div class="navItem">
-                            <a href="search.php" class="navItemLink">Abhinav Risal</a>
+                            <a href="profile.php" class="navItemLink">Abhinav Risal</a>
                         </div>
 
                     </div>
