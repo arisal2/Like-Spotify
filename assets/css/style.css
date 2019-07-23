@@ -164,3 +164,7 @@ body {
     flex-direction: column;
     -ms-flex-direction: column;
 }
+
+.logo img {
+    width: 32px;
+}
