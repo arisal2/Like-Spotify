@@ -16,7 +16,7 @@ include("includes/header.php");
 
                     <img src='". $row['artworkPath']."'>
                     
-                    <div class='gridViewItem'>
+                    <div class='gridViewInfo'>
                        
                     ". $row['title']. "
 
