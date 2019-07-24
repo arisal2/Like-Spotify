@@ -244,3 +244,7 @@ body {
     overflow: hidden;
     white-space: nowrap;
 }
+
+.gridViewItem a {
+    text-decoration: none;
+}
