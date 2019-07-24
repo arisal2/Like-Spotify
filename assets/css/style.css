@@ -208,3 +208,13 @@ body {
     top: 6px;
     width: 25px;
 }
+
+#mainViewContainer {
+    margin-left: 220px;
+    padding-bottom: 90px;
+    width: calc(100% - 220px);
+}
+
+#mainContent {
+    padding: 0 20px;
+}
