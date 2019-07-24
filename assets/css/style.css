@@ -10,6 +10,12 @@ body {
     color: #fff;
 }
 
+body {
+    background-color: #181818;
+    min-width: 720px;
+    font-size: 14px;
+}
+
 #nowPlayingBarContainer {
     width: 100%;
     background-color: #282828;
