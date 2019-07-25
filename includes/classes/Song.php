@@ -24,38 +24,31 @@ class Song{
         $this->path = $this->data['path'];
     }
 
-    public function getTitle()
-    {
+    public function getTitle() {
         return $this->title;
     }
 
-    public function getArtist()
-    {
+    public function getArtist() {
         return new Artist($this->con, $this->artistId);
     }
 
-    public function getAlbum()
-    {
+    public function getAlbum() {
         return new Album($this->con, $this->artistId);
     }
 
-    public function getGenre()
-    {
+    public function getGenre() {
         return $this->genre;
     }
 
-    public function getDuration()
-    {
+    public function getDuration() {
         return $this->duration;
     }
 
-    public function getPath()
-    {
+    public function getPath() {
         return $this->path;
     }
 
-    public function getData()
-    {
+    public function getData() {
         return $this->data;
     }
 }
