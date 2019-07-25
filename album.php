@@ -9,13 +9,9 @@ else {
     header("Location: index.php");
 }
 
-$albumQuery = mysqli_query($con, "SELECT * FROM albums where id = '$albumId'");
-$album = mysqli_fetch_array($albumQuery);
+$album = new Album($con, $albumId);
 
-$artist = new Artist($con,$album['artist']);
-
-echo $album['title']."<br>";
-echo $artist->getName();
+echo $album->getTitle();
 
 ?>
 
