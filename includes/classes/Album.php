@@ -14,6 +14,7 @@ Class Album {
         $this->id = $id;
         $query = mysqli_query($this->con, "SELECT * FROM albums where id= '$this->id'");
         $album = mysqli_fetch_array($query);
+
         $this->title = $album['title'];
         $this->artistId = $album['artist'];
         $this->genre = $album['genre'];
