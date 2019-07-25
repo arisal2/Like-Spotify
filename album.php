@@ -10,14 +10,21 @@ else {
 }
 
 $album = new Album($con, $albumId);
-
 $artist = $album->getArtist();
-
-echo $album->getTitle();
-echo $artist->getName();
 
 ?>
 
+
+<div class="entityInfo">
+    <div class="leftSection">
+        <img src="<?php echo $album->getArtworkPath(); ?>" alt="ArtworkPath">
+    </div>
+
+    <div class="rightSection">
+        <h2><?php echo $album->getTitle(); ?></h2>
+        <span>By <?php echo $artist->getName(); ?></span>
+    </div>
+</div>
 
 
 
