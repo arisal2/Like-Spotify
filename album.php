@@ -11,7 +11,10 @@ else {
 
 $album = new Album($con, $albumId);
 
+$artist = $album->getArtist();
+
 echo $album->getTitle();
+echo $artist->getName();
 
 ?>
 
