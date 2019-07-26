@@ -5,8 +5,6 @@ include("includes/classes/Artist.php");
 include("includes/classes/Album.php");
 include("includes/classes/Song.php");
 
-
-
 if(isset($_SESSION['userLoggedIn'])){
     $userLoggedIn = $_SESSION['userLoggedIn'];
 } 
@@ -20,6 +18,8 @@ $path = "assets/images/icons/";
 <head>
     <title>Welcome to Clonify!</title>
     <link rel="stylesheet" type="text/css" href="assets/css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="assets/js/script.js"></script>
 </head>
 <body>
 
