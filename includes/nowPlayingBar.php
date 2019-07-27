@@ -14,7 +14,7 @@ $jsonArray = json_encode($resultArray);
 
 <script>
 
-$(documnet).ready(function(){
+$(document).ready(function(){
     currentPlaylist = <?php echo $jsonArray ?>;
     audioElement = new Audio();
     setTrack(currentPlaylist[0], currentPlaylist, false);
@@ -22,10 +22,23 @@ $(documnet).ready(function(){
 
 function setTrack(trackId, newPlaylist, play) {
     
-    audioElement.setTrack();
+    audioElement.setTrack("assets/music/bensound-acousticbreeze.mp3");
     if(play){
         audioElement.play();
     }
+}
+
+
+function playSong(){
+    $(".controlButton.play").hide();
+    $(".controlButton.pause").show();
+    audioElement.play();
+}
+
+function pauseSong(){
+    $(".controlButton.play").show();
+    $(".controlButton.pause").hide();
+    audioElement.pause();
 }
 
 </script>
@@ -69,11 +82,11 @@ function setTrack(trackId, newPlaylist, play) {
                         <img src="<?php echo $path ?>previous.png" alt="Previous">
                     </button>
 
-                    <button class="controlButton play" title="Play button">
+                    <button class="controlButton play" title="Play button" onclick="playSong()">
                         <img src="<?php echo $path ?>play.png" alt="Play">
                     </button>
 
-                    <button class="controlButton pause" title="Pause button" style="display: none;">
+                    <button class="controlButton pause" title="Pause button" style="display: none;" onclick="pauseSong()">
                         <img src="<?php echo $path ?>pause.png" alt="Pause">
                     </button>
 
