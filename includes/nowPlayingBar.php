@@ -14,7 +14,75 @@ $jsonArray = json_encode($resultArray);
 
 <script>
 
-console.log(<?php echo $jsonArray ?>)
+$(document).ready(function(){
+    currentPlaylist = <?php echo $jsonArray ?>;
+    audioElement = new Audio()
+    setTrack(currentPlaylist[0], currentPlaylist, false)
+})
+
+const url = {
+        songUrl: "includes/handlers/ajax/getSongJson.php",
+        artistUrl: "includes/handlers/ajax/getArtistJson.php",
+        albumUrl: "includes/handlers/ajax/getAlbumJson.php",
+        updatePlaysUrl: "includes/handlers/ajax/updatePlays.php"
+    }
+
+function setTrack(trackId, newPlaylist, play) {
+
+    const songData = {
+        songId: trackId 
+    }
+    
+    $.post(url['songUrl'], songData, function(data) {
+
+        let track = JSON.parse(data)
+
+        const artistData = {
+            artistId: track.artist
+        }
+
+        const albumData = {
+            albumId: track.album
+        }
+
+        $(".trackName span").text(track.title)
+
+        $.post(url['artistUrl'], artistData, function(data) { 
+                let artist = JSON.parse(data)
+                $(".artistName span").text(artist.name)
+        })
+
+        $.post(url['albumUrl'], albumData, function(data) {
+            let album = JSON.parse(data)
+            $(".albumLink img").attr("src", album.artworkPath)
+        })
+
+
+        audioElement.setTrack(track)
+        playSong()
+
+    })
+
+    if(play){
+        audioElement.play()
+    }
+}
+
+
+function playSong(){
+    if(audioElement.audio.currentTime == 0){
+       $.post(url["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
+    }
+    $(".controlButton.play").hide()
+    $(".controlButton.pause").show()
+    audioElement.play()
+}
+
+function pauseSong(){
+    $(".controlButton.play").show()
+    $(".controlButton.pause").hide()
+    audioElement.pause()
+}
 
 </script>
 
@@ -27,15 +95,15 @@ console.log(<?php echo $jsonArray ?>)
             <div class="content">
 
                 <span class="albumLink">
-                    <img src="http://clipart-library.com/img/2008830.jpg" class="albumArtwork">
+                    <img src="" class="albumArtwork">
                 </span>
 
                 <div class="trackInfo">
                     <span class="trackName">
-                        <span>Schism</span>
+                        <span></span>
                     </span>
                     <span class="artistName">
-                        <span>Tool</span>
+                        <span></span>
                     </span>
                 </div>
 
@@ -57,11 +125,11 @@ console.log(<?php echo $jsonArray ?>)
                         <img src="<?php echo $path ?>previous.png" alt="Previous">
                     </button>
 
-                    <button class="controlButton play" title="Play button">
+                    <button class="controlButton play" title="Play button" onclick="playSong()">
                         <img src="<?php echo $path ?>play.png" alt="Play">
                     </button>
 
-                    <button class="controlButton pause" title="Pause button" style="display: none;">
+                    <button class="controlButton pause" title="Pause button" style="display: none;" onclick="pauseSong()">
                         <img src="<?php echo $path ?>pause.png" alt="Pause">
                     </button>
 
