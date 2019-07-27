@@ -16,9 +16,9 @@ $jsonArray = json_encode($resultArray);
 
 $(document).ready(function(){
     currentPlaylist = <?php echo $jsonArray ?>;
-    audioElement = new Audio();
-    setTrack(currentPlaylist[0], currentPlaylist, false);
-});
+    audioElement = new Audio()
+    setTrack(currentPlaylist[0], currentPlaylist, false)
+})
 
 const url = {
         songUrl: "includes/handlers/ajax/getSongJson.php",
@@ -35,7 +35,7 @@ function setTrack(trackId, newPlaylist, play) {
     
     $.post(url['songUrl'], songData, function(data) {
 
-        let track = JSON.parse(data);
+        let track = JSON.parse(data)
 
         const artistData = {
             artistId: track.artist
@@ -45,43 +45,43 @@ function setTrack(trackId, newPlaylist, play) {
             albumId: track.album
         }
 
-        $(".trackName span").text(track.title);
+        $(".trackName span").text(track.title)
 
         $.post(url['artistUrl'], artistData, function(data) { 
-                let artist = JSON.parse(data);
-                $(".artistName span").text(artist.name);
-        });
+                let artist = JSON.parse(data)
+                $(".artistName span").text(artist.name)
+        })
 
         $.post(url['albumUrl'], albumData, function(data) {
-            let album = JSON.parse(data);
-            $(".albumLink img").attr("src", album.artworkPath);
-        });
+            let album = JSON.parse(data)
+            $(".albumLink img").attr("src", album.artworkPath)
+        })
 
 
-        audioElement.setTrack(track);
-        playSong();
+        audioElement.setTrack(track)
+        playSong()
 
-    });
+    })
 
     if(play){
-        audioElement.play();
+        audioElement.play()
     }
 }
 
 
 function playSong(){
     if(audioElement.audio.currentTime == 0){
-        $.post(url["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying['id'] });
+       $.post(url["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
     }
-    $(".controlButton.play").hide();
-    $(".controlButton.pause").show();
-    audioElement.play();
+    $(".controlButton.play").hide()
+    $(".controlButton.pause").show()
+    audioElement.play()
 }
 
 function pauseSong(){
-    $(".controlButton.play").show();
-    $(".controlButton.pause").hide();
-    audioElement.pause();
+    $(".controlButton.play").show()
+    $(".controlButton.pause").hide()
+    audioElement.pause()
 }
 
 </script>
