@@ -22,15 +22,32 @@ $(document).ready(function(){
 
 function setTrack(trackId, newPlaylist, play) {
 
-    $url = "includes/handlers/ajax/getSongJson.php";
-    $data = {
+    const url = {
+        songUrl: "includes/handlers/ajax/getSongJson.php",
+        artistUrl: "includes/handlers/ajax/getArtistJson.php"
+    }
+ 
+    const songData = {
         songId: trackId 
     }
-
-    $.post($url, $data, function(data) {
+    
+    $.post(url['songUrl'], songData, function(data) {
 
         let track = JSON.parse(data);
-        console.log(data);
+
+        artistData = {
+            artistId: track.artist
+        }
+
+        $(".trackName span").text(track.title);
+
+        $.post(url['artistUrl'], artistData, function(data) { 
+
+                let artist = JSON.parse(data);
+                console.log(artist);
+                $(".artistName span").text(artist.name);
+        });
+
         audioElement.setTrack(track.path);
         audioElement.play();
 
@@ -70,10 +87,10 @@ function pauseSong(){
 
                 <div class="trackInfo">
                     <span class="trackName">
-                        <span>Schism</span>
+                        <span></span>
                     </span>
                     <span class="artistName">
-                        <span>Tool</span>
+                        <span></span>
                     </span>
                 </div>
 
