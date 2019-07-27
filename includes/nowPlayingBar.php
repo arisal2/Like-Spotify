@@ -24,7 +24,8 @@ function setTrack(trackId, newPlaylist, play) {
 
     const url = {
         songUrl: "includes/handlers/ajax/getSongJson.php",
-        artistUrl: "includes/handlers/ajax/getArtistJson.php"
+        artistUrl: "includes/handlers/ajax/getArtistJson.php",
+        albumUrl: "includes/handlers/ajax/getAlbumJson.php"
     }
  
     const songData = {
@@ -39,14 +40,22 @@ function setTrack(trackId, newPlaylist, play) {
             artistId: track.artist
         }
 
+        albumData = {
+            albumId: track.album
+        }
+
         $(".trackName span").text(track.title);
 
         $.post(url['artistUrl'], artistData, function(data) { 
-
                 let artist = JSON.parse(data);
-                console.log(artist);
                 $(".artistName span").text(artist.name);
         });
+
+        $.post(url['albumUrl'], albumData, function(data) {
+            let album = JSON.parse(data);
+            $(".albumLink img").attr("src", album.artworkPath);
+        });
+
 
         audioElement.setTrack(track.path);
         audioElement.play();
@@ -82,7 +91,7 @@ function pauseSong(){
             <div class="content">
 
                 <span class="albumLink">
-                    <img src="http://clipart-library.com/img/2008830.jpg" class="albumArtwork">
+                    <img src="" class="albumArtwork">
                 </span>
 
                 <div class="trackInfo">
