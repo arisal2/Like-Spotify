@@ -1,16 +1,16 @@
-var currentPlaylist = [];
-var audioElement;
+let currentPlaylist = []
+let audioElement
 
 function Audio() {
 
-    this.currentlyPlaying;
-    this.audio = document.createElement('audio');
+    this.currentlyPlaying
 
-    this.setTrack = (src) => {
-        this.audio.src = src;
-    }
+    this.audio = document.createElement('audio')
 
-    this.play = () => {
-        this.audio.play();
-    }
+    this.setTrack = (src) => this.audio.src = src
+
+    this.play = () => this.audio.play()
+
+    this.pause = () => this.audio.pause()
+
 }
