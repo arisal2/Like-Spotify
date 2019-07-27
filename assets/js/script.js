@@ -1,5 +1,20 @@
-var currentPlaylist = []
-var audioElement
+let currentPlaylist = []
+let audioElement
+
+formatTime = (second) => {
+
+    let time = Math.round(second)
+    let minutes = Math.floor(time / 60)
+    let seconds = time - (minutes * 60)
+
+    let extraZero = (seconds < 10) ? "0" : "";
+
+    return minutes + ":" + extraZero + seconds
+}
+
+updateTimeProgressBar = (audio) => {
+    $(".progressTime.current").text(formatTime(audio.currentTime));
+}
 
 function Audio() {
 
@@ -7,17 +22,27 @@ function Audio() {
 
     this.audio = document.createElement('audio')
 
-    this.audio.addEventListener("canplay", function() {
-        $(".progressTime.remaining").text(this.duration)
-    })
+    this.play = () => this.audio.play()
+
+    this.pause = () => this.audio.pause()
+
 
     this.setTrack = (track) => {
         this.currentlyPlaying = track
         this.audio.src = track.path
     }
 
-    this.play = () => this.audio.play()
+    this.audio.addEventListener("timeupdate", function() {
+        if (this.duration) {
+            updateTimeProgressBar(this)
+        }
+    })
 
-    this.pause = () => this.audio.pause()
+    this.audio.addEventListener("canplay", function() {
+
+        let duration = formatTime(this.duration)
+        $(".progressTime.remaining").text(duration)
+
+    })
 
 }
