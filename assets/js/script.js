@@ -7,14 +7,18 @@ formatTime = (second) => {
     let minutes = Math.floor(time / 60)
     let seconds = time - (minutes * 60)
 
-    let extraZero = (seconds < 10) ? "0" : "";
+    let extraZero = (seconds < 10) ? "0" : ""
 
     return minutes + ":" + extraZero + seconds
 }
 
 updateTimeProgressBar = (audio) => {
-    $(".progressTime.current").text(formatTime(audio.currentTime));
-    $(".progressTime.remaining").text(formatTime(audio.duration - audio.currentTime));
+
+    $(".progressTime.current").text(formatTime(audio.currentTime))
+    $(".progressTime.remaining").text(formatTime(audio.duration - audio.currentTime))
+
+    let progress = audio.currentTime / audio.duration * 100
+    $(".progress").css("width", progress + "%")
 }
 
 function Audio() {
