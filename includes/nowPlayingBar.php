@@ -22,9 +22,19 @@ $(document).ready(function(){
 
 function setTrack(trackId, newPlaylist, play) {
 
-    $.post{"includes/handlers/ajax/getSongJson.php",{ songId: trackID }, function(data) {
+    $url = "includes/handlers/ajax/getSongJson.php";
+    $data = {
+        songId: trackId 
+    }
 
-    }};
+    $.post($url, $data, function(data) {
+
+        //var track = JSON.parse(data);
+        console.log(data);
+        audioElement.setTrack(data.path);
+        audioElement.play();
+
+    });
 
     if(play){
         audioElement.play();
