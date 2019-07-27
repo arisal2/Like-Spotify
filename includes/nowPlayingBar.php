@@ -29,9 +29,9 @@ function setTrack(trackId, newPlaylist, play) {
 
     $.post($url, $data, function(data) {
 
-        //var track = JSON.parse(data);
+        let track = JSON.parse(data);
         console.log(data);
-        audioElement.setTrack(data.path);
+        audioElement.setTrack(track.path);
         audioElement.play();
 
     });
