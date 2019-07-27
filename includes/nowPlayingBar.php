@@ -21,7 +21,11 @@ $(documnet).ready(function(){
 });
 
 function setTrack(trackId, newPlaylist, play) {
-
+    
+    audioElement.setTrack();
+    if(play){
+        audioElement.play();
+    }
 }
 
 </script>
