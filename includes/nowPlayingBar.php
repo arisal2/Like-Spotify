@@ -36,11 +36,11 @@ function setTrack(trackId, newPlaylist, play) {
 
         let track = JSON.parse(data);
 
-        artistData = {
+        const artistData = {
             artistId: track.artist
         }
 
-        albumData = {
+        const albumData = {
             albumId: track.album
         }
 
@@ -69,6 +69,12 @@ function setTrack(trackId, newPlaylist, play) {
 
 
 function playSong(){
+
+    if(audioElement.audio.currentTime == 0){
+
+    } else {
+        
+    }
     $(".controlButton.play").hide();
     $(".controlButton.pause").show();
     audioElement.play();
