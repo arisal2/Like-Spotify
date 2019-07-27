@@ -20,14 +20,15 @@ $(document).ready(function(){
     setTrack(currentPlaylist[0], currentPlaylist, false);
 });
 
-function setTrack(trackId, newPlaylist, play) {
-
-    const url = {
+const url = {
         songUrl: "includes/handlers/ajax/getSongJson.php",
         artistUrl: "includes/handlers/ajax/getArtistJson.php",
-        albumUrl: "includes/handlers/ajax/getAlbumJson.php"
+        albumUrl: "includes/handlers/ajax/getAlbumJson.php",
+        updatePlaysUrl: "includes/handlers/ajax/updatePlays.php"
     }
- 
+
+function setTrack(trackId, newPlaylist, play) {
+
     const songData = {
         songId: trackId 
     }
@@ -57,8 +58,8 @@ function setTrack(trackId, newPlaylist, play) {
         });
 
 
-        audioElement.setTrack(track.path);
-        audioElement.play();
+        audioElement.setTrack(track);
+        playSong();
 
     });
 
@@ -69,11 +70,8 @@ function setTrack(trackId, newPlaylist, play) {
 
 
 function playSong(){
-
     if(audioElement.audio.currentTime == 0){
-
-    } else {
-        
+        $.post(url["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying['id'] });
     }
     $(".controlButton.play").hide();
     $(".controlButton.pause").show();

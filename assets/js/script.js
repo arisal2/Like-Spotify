@@ -1,5 +1,5 @@
-let currentPlaylist = []
-let audioElement
+var currentPlaylist = []
+var audioElement
 
 function Audio() {
 
@@ -7,7 +7,10 @@ function Audio() {
 
     this.audio = document.createElement('audio')
 
-    this.setTrack = (src) => this.audio.src = src
+    this.setTrack = (track) => {
+        this.currentlyPlaying = track
+        this.audio.src = track.path
+    }
 
     this.play = () => this.audio.play()
 
