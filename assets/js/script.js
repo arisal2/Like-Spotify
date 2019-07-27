@@ -14,6 +14,7 @@ formatTime = (second) => {
 
 updateTimeProgressBar = (audio) => {
     $(".progressTime.current").text(formatTime(audio.currentTime));
+    $(".progressTime.remaining").text(formatTime(audio.duration - audio.currentTime));
 }
 
 function Audio() {
