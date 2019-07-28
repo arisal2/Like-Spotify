@@ -1,5 +1,6 @@
 let currentPlaylist = []
 let audioElement
+let mouseDown = false
 
 formatTime = (second) => {
 
@@ -18,7 +19,16 @@ updateTimeProgressBar = (audio) => {
     $(".progressTime.remaining").text(formatTime(audio.duration - audio.currentTime))
 
     let progress = audio.currentTime / audio.duration * 100
-    $(".progress").css("width", progress + "%")
+    $(".playbackBar .progress").css("width", progress + "%")
+
+}
+
+updateVolumeProgressBar = (audio) => {
+
+    let volume = audio.volume * 100
+    console.log(volume)
+    $(".volumeBar .progress").css("width", volume + "%")
+
 }
 
 function Audio() {
@@ -31,6 +41,7 @@ function Audio() {
 
     this.pause = () => this.audio.pause()
 
+    this.setTime = (seconds) => this.audio.currentTime = seconds
 
     this.setTrack = (track) => {
         this.currentlyPlaying = track
@@ -48,6 +59,10 @@ function Audio() {
         let duration = formatTime(this.duration)
         $(".progressTime.remaining").text(duration)
 
+    })
+
+    this.audio.addEventListener("volumechange", function() {
+        updateVolumeProgressBar(this)
     })
 
 }
