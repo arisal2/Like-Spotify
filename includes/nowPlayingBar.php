@@ -18,6 +18,15 @@ $(document).ready(function(){
     currentPlaylist = <?php echo $jsonArray ?>;
     audioElement = new Audio()
     setTrack(currentPlaylist[0], currentPlaylist, false)
+
+    (".playbackBar .progressBar").mousedown(function(){
+        mousedown=true;
+    })
+    (".playbackBar .progressBar").mousemove(function(){
+        if(mousedown){
+
+        }
+    })
 })
 
 const url = {
@@ -27,7 +36,9 @@ const url = {
         updatePlaysUrl: "includes/handlers/ajax/updatePlays.php"
     }
 
-function setTrack(trackId, newPlaylist, play) {
+
+
+ setTrack = (trackId, newPlaylist, play) => {
 
     const songData = {
         songId: trackId 
@@ -69,7 +80,7 @@ function setTrack(trackId, newPlaylist, play) {
 }
 
 
-function playSong(){
+ playSong = () => {
     if(audioElement.audio.currentTime == 0){
        $.post(url["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
     }
@@ -78,7 +89,7 @@ function playSong(){
     audioElement.play()
 }
 
-function pauseSong(){
+pauseSong = () => {
     $(".controlButton.play").show()
     $(".controlButton.pause").hide()
     audioElement.pause()
