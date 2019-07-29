@@ -77,25 +77,31 @@ const url = {
         artistUrl: "includes/handlers/ajax/getArtistJson.php",
         albumUrl: "includes/handlers/ajax/getAlbumJson.php",
         updatePlaysUrl: "includes/handlers/ajax/updatePlays.php"
-    }
+}
 
- timeFromOffset = (mouse, progressBar) => {
+timeFromOffset = (mouse, progressBar) => {
     let percentage = mouse.offsetX / $(progressBar).width() * 100
     let seconds = audioElement.audio.duration * (percentage/100)
     audioElement.setTime(seconds)
- }    
+}    
 
- nextSong = () => {
-     if(currentIndex == currentPlaylist.length-1)       
+nextSong = () => {
+    if( repeat == true )
+    {
+        audioElement.setTime(0)
+        playSong()
+        return
+    }
+    if(currentIndex == currentPlaylist.length-1)       
         currentIndex = 0
-     else 
+    else 
         currentIndex++
      
-     let trackToPlay = currentPlaylist[currentIndex]
-     setTrack(trackToPlay, currentPlaylist, true)
- }
+    let trackToPlay = currentPlaylist[currentIndex]
+    setTrack(trackToPlay, currentPlaylist, true)
+}
 
- previousSong = () => {
+previousSong = () => {
     if(currentIndex == 0)       
         currentIndex = currentPlaylist.length-1
      else 
@@ -103,17 +109,24 @@ const url = {
 
     let trackToPlay = currentPlaylist[currentIndex]
     setTrack(trackToPlay, currentPlaylist, true)
- }
+}
 
- setTrack = (trackId, newPlaylist, play) => {
+setRepeat = () => {
+    repeat = !repeat
+    let imageName = repeat ? "repeat-active.png" : "repeat.png"
+    $(".controlButton.repeat img").attr("src","assets/images/icons/" + imageName)
+}
+
+setTrack = (trackId, newPlaylist, play) => {
 
     const songData = {
         songId: trackId 
     }
     
-    $.post(url['songUrl'], songData, function(data) {
+    currentIndex = currentPlaylist.indexOf(trackId)
+    pauseSong()
 
-        currentIndex = currentPlaylist.indexOf(trackId)
+    $.post(url['songUrl'], songData, function(data) {
 
         let track = JSON.parse(data)
 
@@ -149,7 +162,7 @@ const url = {
 }
 
 
- playSong = () => {
+playSong = () => {
     if(audioElement.audio.currentTime == 0){
        $.post(url["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
     }
@@ -197,27 +210,27 @@ pauseSong = () => {
 
                 <div class="buttons">
 
-                    <button class="controlButton shuffle" title="Shuffle button">
+                    <button class="controlButton shuffle" title="Shuffle">
                         <img src="<?php echo $path ?>shuffle.png" alt="Shuffle">
                     </button>
 
-                    <button class="controlButton previous" title="Previous button" onclick="previousSong()">
+                    <button class="controlButton previous" title="Previous" onclick="previousSong()">
                         <img src="<?php echo $path ?>previous.png" alt="Previous">
                     </button>
 
-                    <button class="controlButton play" title="Play button" onclick="playSong()">
+                    <button class="controlButton play" title="Play" onclick="playSong()">
                         <img src="<?php echo $path ?>play.png" alt="Play">
                     </button>
 
-                    <button class="controlButton pause" title="Pause button" style="display: none;" onclick="pauseSong()">
+                    <button class="controlButton pause" title="Pause" style="display: none;" onclick="pauseSong()">
                         <img src="<?php echo $path ?>pause.png" alt="Pause">
                     </button>
 
-                    <button class="controlButton next" title="Next button" onclick="nextSong()">
+                    <button class="controlButton next" title="Next" onclick="nextSong()">
                         <img src="<?php echo $path ?>next.png" alt="Next">
                     </button>
 
-                    <button class="controlButton repeat" title="Repeat button">
+                    <button class="controlButton repeat" title="Repeat" onclick="setRepeat()">
                         <img src="<?php echo $path ?>repeat.png" alt="Repeat">
                     </button>
 
