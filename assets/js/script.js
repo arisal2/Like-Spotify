@@ -6,6 +6,7 @@ let mouseDown = false
 let currentIndex = 0
 let repeat = false
 let shuffle = false
+let userLoggedin
 
 formatTime = (second) => {
 
