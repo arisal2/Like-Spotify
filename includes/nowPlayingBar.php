@@ -21,12 +21,11 @@ $(document).ready(function(){
     updateVolumeProgressBar(audioElement.audio)
 
     //prevents highlights on control buttons
-    $("#nowPlayingBarContainer".on("mousedown touchstart mousemove touchmove", function(e){
-        e.preventDefault();
-    }))
+    $("#nowPlayingBarContainer").on("mousedown touchstart mousemove touchmove", function(e){
+        e.preventDefault()
+    })
     
     //Progress Bar control
-
     $(".playbackBar .progressBar").mousedown(function(){
         mouseDown=true
     })
@@ -86,6 +85,26 @@ const url = {
     audioElement.setTime(seconds)
  }    
 
+ nextSong = () => {
+     if(currentIndex == currentPlaylist.length-1)       
+        currentIndex = 0
+     else 
+        currentIndex++
+     
+     let trackToPlay = currentPlaylist[currentIndex]
+     setTrack(trackToPlay, currentPlaylist, true)
+ }
+
+ previousSong = () => {
+    if(currentIndex == 0)       
+        currentIndex = currentPlaylist.length-1
+     else 
+        currentIndex--
+
+    let trackToPlay = currentPlaylist[currentIndex]
+    setTrack(trackToPlay, currentPlaylist, true)
+ }
+
  setTrack = (trackId, newPlaylist, play) => {
 
     const songData = {
@@ -93,6 +112,8 @@ const url = {
     }
     
     $.post(url['songUrl'], songData, function(data) {
+
+        currentIndex = currentPlaylist.indexOf(trackId)
 
         let track = JSON.parse(data)
 
@@ -180,7 +201,7 @@ pauseSong = () => {
                         <img src="<?php echo $path ?>shuffle.png" alt="Shuffle">
                     </button>
 
-                    <button class="controlButton previous" title="Previous button">
+                    <button class="controlButton previous" title="Previous button" onclick="previousSong()">
                         <img src="<?php echo $path ?>previous.png" alt="Previous">
                     </button>
 
@@ -192,7 +213,7 @@ pauseSong = () => {
                         <img src="<?php echo $path ?>pause.png" alt="Pause">
                     </button>
 
-                    <button class="controlButton next" title="Next button">
+                    <button class="controlButton next" title="Next button" onclick="nextSong()">
                         <img src="<?php echo $path ?>next.png" alt="Next">
                     </button>
 
