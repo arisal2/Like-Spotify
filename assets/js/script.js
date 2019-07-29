@@ -1,11 +1,23 @@
-let currentPlaylist = []
-let shufflePlaylist = []
-let tempPlaylist = []
-let audioElement
-let mouseDown = false
-let currentIndex = 0
-let repeat = false
-let shuffle = false
+var currentPlaylist = []
+var shufflePlaylist = []
+var tempPlaylist = []
+var audioElement
+var mouseDown = false
+var currentIndex = 0
+var repeat = false
+var shuffle = false
+var userLoggedin
+
+openPage = (url) => {
+    if (url.indexOf("?") == -1) {
+        url = url + "?"
+    }
+
+    let encodedUrl = encodeURI(url + "&userLoggedIn=" + userLoggedIn)
+    $("#mainContent").load(encodedUrl)
+    $("body").scrollTop(0)
+    history.pushState(null, null, url)
+}
 
 formatTime = (second) => {
 
