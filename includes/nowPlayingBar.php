@@ -72,7 +72,7 @@ $(document).ready(function(){
     })
 })
 
-const url = {
+var localUrl = {
         songUrl: "includes/handlers/ajax/getSongJson.php",
         artistUrl: "includes/handlers/ajax/getArtistJson.php",
         albumUrl: "includes/handlers/ajax/getAlbumJson.php",
@@ -137,7 +137,7 @@ setShuffle = () => {
 }
 
 shuffleArray = (a) => {
-    var j, x, i
+    let j, x, i
     for (i = a.length - 1; i > 0; i--) {
         j = Math.floor(Math.random() * (i + 1))
         x = a[i]
@@ -167,7 +167,7 @@ setTrack = (trackId, newPlaylist, play) => {
         songId: trackId 
     }
 
-    $.post(url['songUrl'], songData, function(data) {
+    $.post(localUrl['songUrl'], songData, function(data) {
 
         let track = JSON.parse(data)
 
@@ -181,20 +181,18 @@ setTrack = (trackId, newPlaylist, play) => {
 
         $(".trackName span").text(track.title)
 
-        $.post(url['artistUrl'], artistData, function(data) { 
+        $.post(localUrl['artistUrl'], artistData, function(data) { 
                 let artist = JSON.parse(data)
                 $(".artistName span").text(artist.name)
         })
 
-        $.post(url['albumUrl'], albumData, function(data) {
+        $.post(localUrl['albumUrl'], albumData, function(data) {
             let album = JSON.parse(data)
             $(".albumLink img").attr("src", album.artworkPath)
         })
 
 
         audioElement.setTrack(track)
-        playSong()
-
     })
 
     if(play){
@@ -205,7 +203,7 @@ setTrack = (trackId, newPlaylist, play) => {
 
 playSong = () => {
     if(audioElement.audio.currentTime == 0){
-       $.post(url["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
+       $.post(localUrl["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
     }
     $(".controlButton.play").hide()
     $(".controlButton.pause").show()

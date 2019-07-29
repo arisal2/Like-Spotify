@@ -1,8 +1,8 @@
 <div id="navBarContainer">
                 <nav class="navBar">
-                    <a href="index.php" class="logo">
+                    <span class="logo" onclick="openPage('index.php')">
                         <img src="<?php echo $path ?>music.png" alt="Music">
-                    </a>
+                    </span>
 
                     <div class="group">
 
