@@ -1,8 +1,10 @@
 let currentPlaylist = []
+let shufflePlaylist = []
 let audioElement
 let mouseDown = false
 let currentIndex = 0
 let repeat = false
+let shuffle = false
 
 formatTime = (second) => {
 

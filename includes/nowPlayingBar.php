@@ -15,9 +15,9 @@ $jsonArray = json_encode($resultArray);
 <script>
 
 $(document).ready(function(){
-    currentPlaylist = <?php echo $jsonArray ?>;
+    let newPlaylist = <?php echo $jsonArray ?>;
     audioElement = new Audio()
-    setTrack(currentPlaylist[0], currentPlaylist, false)
+    setTrack(newPlaylist[0], newPlaylist, false)
     updateVolumeProgressBar(audioElement.audio)
 
     //prevents highlights on control buttons
@@ -97,7 +97,7 @@ nextSong = () => {
     else 
         currentIndex++
      
-    let trackToPlay = currentPlaylist[currentIndex]
+    let trackToPlay = shuffle ? shufflePlaylist[currentIndex] : currentPlaylist[currentIndex]
     setTrack(trackToPlay, currentPlaylist, true)
 }
 
@@ -123,14 +123,49 @@ setMute = () => {
     $(".controlButton.volume img").attr("src","assets/images/icons/" + imageName)
 }
 
+setShuffle = () => {
+    shuffle = !shuffle
+    let imageName = shuffle ? "shuffle-active.png":"shuffle.png"
+    $(".controlButton.shuffle img").attr("src","assets/images/icons/" + imageName)
+
+    if(shuffle){
+        shuffleArray(shufflePlaylist)
+        currentIndex = shufflePlaylist.indexOf(audioElement.currentlyPlaying.id)
+    } else {
+        currentIndex = currentPlaylist.indexOf(audioElement.currentlyPlaying.id)
+    }
+}
+
+shuffleArray = (a) => {
+    var j, x, i;
+    for (i = a.length - 1; i > 0; i--) {
+        j = Math.floor(Math.random() * (i + 1));
+        x = a[i];
+        a[i] = a[j];
+        a[j] = x;
+    }
+    return a;
+}
+
 setTrack = (trackId, newPlaylist, play) => {
+
+    if(newPlaylist != currentPlaylist){
+        currentPlaylist = newPlaylist;
+        shufflePlaylist = currentPlaylist.slice()
+        shuffleArray(shufflePlaylist)
+    }
+
+    if(shuffle) {
+        currentIndex = shufflePlaylist.indexOf(trackId)
+    } else {
+        currentIndex = currentPlaylist.indexOf(trackId)
+    }
+
+    pauseSong()
 
     const songData = {
         songId: trackId 
     }
-    
-    currentIndex = currentPlaylist.indexOf(trackId)
-    pauseSong()
 
     $.post(url['songUrl'], songData, function(data) {
 
@@ -216,7 +251,7 @@ pauseSong = () => {
 
                 <div class="buttons">
 
-                    <button class="controlButton shuffle" title="Shuffle">
+                    <button class="controlButton shuffle" title="Shuffle" onclick="setShuffle()">
                         <img src="<?php echo $path ?>shuffle.png" alt="Shuffle">
                     </button>
 
