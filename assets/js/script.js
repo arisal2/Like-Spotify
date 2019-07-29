@@ -66,4 +66,8 @@ function Audio() {
         updateVolumeProgressBar(this)
     })
 
+    this.audio.addEventListener("ended", function() {
+        nextSong()
+    })
+
 }
