@@ -102,13 +102,13 @@ nextSong = () => {
 }
 
 previousSong = () => {
-    if(currentIndex == 0)       
-        currentIndex = currentPlaylist.length-1
-     else 
-        currentIndex--
 
-    let trackToPlay = currentPlaylist[currentIndex]
-    setTrack(trackToPlay, currentPlaylist, true)
+    if(audioElement.audio.currentTime >=3 || currentIndex == 0)       
+        audioElement.setTime(0)
+    else {
+        currentIndex--
+        setTrack(currentPlaylist[currentIndex], currentPlaylist, true)
+    }
 }
 
 setRepeat = () => {
