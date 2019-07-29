@@ -26,7 +26,6 @@ updateTimeProgressBar = (audio) => {
 updateVolumeProgressBar = (audio) => {
 
     let volume = audio.volume * 100
-    console.log(volume)
     $(".volumeBar .progress").css("width", volume + "%")
 
 }
