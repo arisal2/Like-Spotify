@@ -193,11 +193,13 @@ setTrack = (trackId, newPlaylist, play) => {
 
 
         audioElement.setTrack(track)
+
+        if(play){
+            playSong()
+        }
     })
 
-    if(play){
-        audioElement.play()
-    }
+   
 }
 
 
