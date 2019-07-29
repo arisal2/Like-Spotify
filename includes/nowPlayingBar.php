@@ -19,6 +19,11 @@ $(document).ready(function(){
     audioElement = new Audio()
     setTrack(currentPlaylist[0], currentPlaylist, false)
     updateVolumeProgressBar(audioElement.audio)
+
+    //prevents highlights on control buttons
+    $("#nowPlayingBarContainer".on("mousedown touchstart mousemove touchmove", function(e){
+        e.preventDefault();
+    }))
     
     //Progress Bar control
 
