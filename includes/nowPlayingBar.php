@@ -117,6 +117,12 @@ setRepeat = () => {
     $(".controlButton.repeat img").attr("src","assets/images/icons/" + imageName)
 }
 
+setMute = () => {
+    audioElement.audio.muted = !audioElement.audio.muted 
+    let imageName = audioElement.audio.muted ? "volume-mute.png":"volume.png"
+    $(".controlButton.volume img").attr("src","assets/images/icons/" + imageName)
+}
+
 setTrack = (trackId, newPlaylist, play) => {
 
     const songData = {
@@ -264,8 +270,8 @@ pauseSong = () => {
 
             <div class="volumeBar">
                 
-                <button class="controlButton volume" title="Volume button">
-                    <img src="<?php echo $path ?>volume.png" alt="">
+                <button class="controlButton volume" title="Volume button" onclick="setMute()">
+                    <img src="<?php echo $path ?>volume.png" alt="Volume">
                 </button>
 
                 <div class="ProgressBar">
