@@ -7,6 +7,7 @@ var currentIndex = 0
 var repeat = false
 var shuffle = false
 var userLoggedin
+var timer
 
 openPage = (url) => {
     if (url.indexOf("?") == -1) {
