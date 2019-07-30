@@ -182,16 +182,18 @@ setTrack = (trackId, newPlaylist, play) => {
         $(".trackName span").text(track.title)
 
         $.post(localUrl['artistUrl'], artistData, function(data) { 
-                let artist = JSON.parse(data)
-                $(".artistName span").text(artist.name)
+            let artist = JSON.parse(data)
+            $(".artistName span").text(artist.name)
+            $(".artistName span").attr("onclick", "openPage('artist.php?id="+ artist.id +"')")
         })
 
         $.post(localUrl['albumUrl'], albumData, function(data) {
             let album = JSON.parse(data)
             $(".albumLink img").attr("src", album.artworkPath)
+            $(".albumLink img").attr("onclick", "openPage('album.php?id="+ album.id +"')")
+            $(".trackName span").attr("onclick", "openPage('album.php?id="+ album.id +"')")
         })
-
-
+        
         audioElement.setTrack(track)
 
         if(play){
@@ -201,7 +203,6 @@ setTrack = (trackId, newPlaylist, play) => {
 
    
 }
-
 
 playSong = () => {
     if(audioElement.audio.currentTime == 0){
@@ -229,15 +230,15 @@ pauseSong = () => {
             <div class="content">
 
                 <span class="albumLink">
-                    <img src="" class="albumArtwork">
+                    <img role="link" tabIndex="0" src="" class="albumArtwork">
                 </span>
 
                 <div class="trackInfo">
                     <span class="trackName">
-                        <span></span>
+                        <span role="link" tabIndex="0"></span>
                     </span>
                     <span class="artistName">
-                        <span></span>
+                        <span role="link" tabIndex="0"></span>
                     </span>
                 </div>
 
