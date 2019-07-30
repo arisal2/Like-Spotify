@@ -394,3 +394,22 @@ body {
 [role="link"] {
     cursor: pointer;
 }
+
+.searchContainer {
+    background-color: #242424;
+    padding: 20px 20px;
+}
+
+.searchContainer .searchInput {
+    width: 100%;
+    background-color: transparent;
+    border: none;
+    color: #fff;
+    font-weight: 700px;
+    font-size: 62px;
+    letter-spacing: 2px;
+}
+
+input:focus {
+    outline: none;
+}
