@@ -14,7 +14,8 @@ const localUrl = {
     artistUrl: "includes/handlers/ajax/getArtistJson.php",
     albumUrl: "includes/handlers/ajax/getAlbumJson.php",
     updatePlaysUrl: "includes/handlers/ajax/updatePlays.php",
-    createPlaylist: "includes/handlers/ajax/createPlaylist.php"
+    createPlaylist: "includes/handlers/ajax/createPlaylist.php",
+    deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
 }
 
 openPage = (url) => {
@@ -37,12 +38,33 @@ createPlaylist = () => {
 
     if (popup != null) {
 
-        $.post(localUrl['createPlaylist'], playlistData).done(function(message) {
-            if (message != "") {
-                alert(message)
-                return
-            }
-        })
+        $.post(localUrl['createPlaylist'], playlistData)
+            .done(function(error) {
+                if (error != "") {
+                    alert(error)
+                    return
+                }
+                openPage("yourMusic.php")
+            })
+    }
+}
+
+deletePlaylist = (playlistId) => {
+
+    let prompt = confirm("Are you sure you want to delete the playlist?")
+
+    let deleteData = { playlistId: playlistId }
+
+    if (prompt) {
+
+        $.post(localUrl['deletePlaylist'], deleteData)
+            .done(function(error) {
+                if (error != "") {
+                    alert(error)
+                    return
+                }
+                openPage("yourMusic.php")
+            })
     }
 }
 
