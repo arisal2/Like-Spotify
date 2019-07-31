@@ -125,7 +125,7 @@ if($term == "") exit();
         echo "
         <div class='searchResultRow'>
             <div class='artistName'>
-                <span role='link tabindex='0' onclick=openPage(\"'artist.php?id=".$artistFound->getId()."\)'>
+                <span role='link tabindex='0' onclick='openPage(\"artist.php?id=".$artistFound->getId()."\")'>
                     "
                     .$artistFound->getName().
                     "
