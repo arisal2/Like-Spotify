@@ -6,7 +6,7 @@ var mouseDown = false
 var currentIndex = 0
 var repeat = false
 var shuffle = false
-var userLoggedin
+var userLoggedIn
 var timer
 
 const localUrl = {
@@ -29,14 +29,19 @@ openPage = (url) => {
     history.pushState(null, null, url)
 }
 
-createPlaylist = (username) => {
+createPlaylist = () => {
 
-    let alert = prompt("Please enter the name of your playlist")
+    let popup = prompt("Please enter the name of your playlist")
 
-    if (alert != null) {
+    let playlistData = { name: popup, username: userLoggedIn }
 
-        $.post(localUrl['createPlaylist'], { name: alert, username: username }).done(function() {
+    if (popup != null) {
 
+        $.post(localUrl['createPlaylist'], playlistData).done(function(message) {
+            if (message != "") {
+                alert(message)
+                return
+            }
         })
     }
 }
