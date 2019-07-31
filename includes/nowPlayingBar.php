@@ -72,13 +72,6 @@ $(document).ready(function(){
     })
 })
 
-var localUrl = {
-        songUrl: "includes/handlers/ajax/getSongJson.php",
-        artistUrl: "includes/handlers/ajax/getArtistJson.php",
-        albumUrl: "includes/handlers/ajax/getAlbumJson.php",
-        updatePlaysUrl: "includes/handlers/ajax/updatePlays.php"
-}
-
 timeFromOffset = (mouse, progressBar) => {
     let percentage = mouse.offsetX / $(progressBar).width() * 100
     let seconds = audioElement.audio.duration * (percentage/100)
@@ -183,15 +176,15 @@ setTrack = (trackId, newPlaylist, play) => {
 
         $.post(localUrl['artistUrl'], artistData, function(data) { 
             let artist = JSON.parse(data)
-            $(".artistName span").text(artist.name)
-            $(".artistName span").attr("onclick", "openPage('artist.php?id="+ artist.id +"')")
+            $(".trackInfo .artistName span").text(artist.name)
+            $(".trackInfo .artistName span").attr("onclick", "openPage('artist.php?id="+ artist.id +"')")
         })
 
         $.post(localUrl['albumUrl'], albumData, function(data) {
             let album = JSON.parse(data)
-            $(".albumLink img").attr("src", album.artworkPath)
-            $(".albumLink img").attr("onclick", "openPage('album.php?id="+ album.id +"')")
-            $(".trackName span").attr("onclick", "openPage('album.php?id="+ album.id +"')")
+            $(".content .albumLink img").attr("src", album.artworkPath)
+            $(".content .albumLink img").attr("onclick", "openPage('album.php?id="+ album.id +"')")
+            $("trackInfo .trackName span").attr("onclick", "openPage('album.php?id="+ album.id +"')")
         })
         
         audioElement.setTrack(track)
