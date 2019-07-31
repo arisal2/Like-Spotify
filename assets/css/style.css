@@ -439,3 +439,8 @@ input:focus {
     font-size: smaller;
     font-weight: bold;
 }
+
+.playlistImage {
+    border: 3px solid #282828;
+    padding: 10px;
+}

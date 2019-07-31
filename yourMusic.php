@@ -27,7 +27,10 @@ include("includes/includedFile.php")
         }
 
         while($row = mysqli_fetch_array($playlistQuery)) {
-            echo "<div class='gridViewItem'>
+
+            $playlist = new Playlist($con, $row);
+
+            echo "<div role='link' tabindex='0' onclick='openPage()' class='gridViewItem'>
 
                 <div class='playListImage'>
                     <img src='assets/images/icons/playlist.png'>
@@ -35,7 +38,7 @@ include("includes/includedFile.php")
 
                 <div class='gridViewInfo'>
                         
-                ". $row['name']. "
+                ". $playlist->getName() . "
 
                 </div>
             </div>";
