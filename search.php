@@ -22,7 +22,10 @@ if(isset($_GET['term'])){
 $(".searchInput").focus()
 
 $(function() {
-    var timer
+
+    if(timer != null){
+        clearTimeout(timer)
+    }
     $(".searchInput").keyup(function() {
         clearTimeout(timer)
 
@@ -34,6 +37,12 @@ $(function() {
 })
 
 </script>
+
+<?php 
+
+if($term == "") exit();
+
+?>
 
 
 <div class="trackListContainer borderBottom">
@@ -116,7 +125,7 @@ $(function() {
         echo "
         <div class='searchResultRow'>
             <div class='artistName'>
-                <span role='link tabindex='0' onclick=openPage(\"artist.php?id=".$artistFound->getId()."\)'>
+                <span role='link tabindex='0' onclick='openPage(\"artist.php?id=".$artistFound->getId()."\")'>
                     "
                     .$artistFound->getName().
                     "
@@ -126,4 +135,29 @@ $(function() {
         "; 
     }
     ?>
+</div>
+
+<div class="gridViewContainer">
+    <h2>ALBUMS</h2>
+    <?php
+        $albumQuery = mysqli_query($con, "SELECT * FROM albums WHERE title like '$term%' LIMIT 10");
+
+        if(mysqli_num_rows($albumQuery) == 0){
+            echo "<span class='noResult'> No album found matching ". $term. "</span>";
+        }
+
+        while($row = mysqli_fetch_array($albumQuery)) {
+            echo "<div class='gridViewItem'>
+                    <span role='link' tabindex='0' onclick='openPage(\"album.php?id=" .$row['id']. "\")'>
+                    <img src='". $row['artworkPath']. "'>
+                    
+                    <div class='gridViewInfo'>
+                       
+                    ". $row['title']. "
+
+                    </div>
+                </span>    
+            </div>";
+        }
+    ?> 
 </div>

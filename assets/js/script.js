@@ -6,9 +6,20 @@ var mouseDown = false
 var currentIndex = 0
 var repeat = false
 var shuffle = false
-var userLoggedin
+var userLoggedIn
+var timer
+
+const localUrl = {
+    songUrl: "includes/handlers/ajax/getSongJson.php",
+    artistUrl: "includes/handlers/ajax/getArtistJson.php",
+    albumUrl: "includes/handlers/ajax/getAlbumJson.php",
+    updatePlaysUrl: "includes/handlers/ajax/updatePlays.php",
+    createPlaylist: "includes/handlers/ajax/createPlaylist.php",
+    deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
+}
 
 openPage = (url) => {
+
     if (url.indexOf("?") == -1) {
         url = url + "?"
     }
@@ -17,6 +28,44 @@ openPage = (url) => {
     $("#mainContent").load(encodedUrl)
     $("body").scrollTop(0)
     history.pushState(null, null, url)
+}
+
+createPlaylist = () => {
+
+    let popup = prompt("Please enter the name of your playlist")
+
+    let playlistData = { name: popup, username: userLoggedIn }
+
+    if (popup != null) {
+
+        $.post(localUrl['createPlaylist'], playlistData)
+            .done(function(error) {
+                if (error != "") {
+                    alert(error)
+                    return
+                }
+                openPage("yourMusic.php")
+            })
+    }
+}
+
+deletePlaylist = (playlistId) => {
+
+    let prompt = confirm("Are you sure you want to delete the playlist?")
+
+    let deleteData = { playlistId: playlistId }
+
+    if (prompt) {
+
+        $.post(localUrl['deletePlaylist'], deleteData)
+            .done(function(error) {
+                if (error != "") {
+                    alert(error)
+                    return
+                }
+                openPage("yourMusic.php")
+            })
+    }
 }
 
 formatTime = (second) => {
