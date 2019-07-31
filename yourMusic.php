@@ -13,7 +13,7 @@ include("includes/includedFile.php")
     
     <div class="buttonItems">
         
-        <button class="button green">NEW PLAYLISTS</button>
+        <button class="button green" onclick="createPlaylist()">NEW PLAYLISTS</button>
     
     </div>
 

@@ -72,13 +72,6 @@ $(document).ready(function(){
     })
 })
 
-var localUrl = {
-        songUrl: "includes/handlers/ajax/getSongJson.php",
-        artistUrl: "includes/handlers/ajax/getArtistJson.php",
-        albumUrl: "includes/handlers/ajax/getAlbumJson.php",
-        updatePlaysUrl: "includes/handlers/ajax/updatePlays.php"
-}
-
 timeFromOffset = (mouse, progressBar) => {
     let percentage = mouse.offsetX / $(progressBar).width() * 100
     let seconds = audioElement.audio.duration * (percentage/100)

@@ -9,7 +9,16 @@ var shuffle = false
 var userLoggedin
 var timer
 
+const localUrl = {
+    songUrl: "includes/handlers/ajax/getSongJson.php",
+    artistUrl: "includes/handlers/ajax/getArtistJson.php",
+    albumUrl: "includes/handlers/ajax/getAlbumJson.php",
+    updatePlaysUrl: "includes/handlers/ajax/updatePlays.php",
+    createPlaylist: "includes/handlers/ajax/createPlaylist.php"
+}
+
 openPage = (url) => {
+
     if (url.indexOf("?") == -1) {
         url = url + "?"
     }
@@ -18,6 +27,18 @@ openPage = (url) => {
     $("#mainContent").load(encodedUrl)
     $("body").scrollTop(0)
     history.pushState(null, null, url)
+}
+
+createPlaylist = (username) => {
+
+    let alert = prompt("Please enter the name of your playlist")
+
+    if (alert != null) {
+
+        $.post(localUrl['createPlaylist'], { name: alert, username: username }).done(function() {
+
+        })
+    }
 }
 
 formatTime = (second) => {
