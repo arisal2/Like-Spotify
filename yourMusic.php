@@ -17,6 +17,33 @@ include("includes/includedFile.php")
     
     </div>
 
+    <?php
+        $username = $userLoggedIn->getUsername();
+    
+        $playlistQuery = mysqli_query($con, "SELECT * FROM playlists WHERE owner ='$username'");
+
+        if(mysqli_num_rows($playlistQuery) == 0){
+            echo "<span class='noResult'> No playlists found matching ". $username. "</span>";
+        }
+
+        while($row = mysqli_fetch_array($playlistQuery)) {
+            echo "<div class='gridViewItem'>
+
+                <div class='playListImage'>
+                    <img src='assets/images/icons/playlist.png'>
+                </div>
+
+                <div class='gridViewInfo'>
+                        
+                ". $row['name']. "
+
+                </div>
+            </div>";
+        }
+    ?> 
+
     </div>
 
 </div>
+
+
