@@ -79,7 +79,7 @@ $artistId = $artist->getId();
 
 <nav class="optionsMenu">
     <input type="hidden" class="songId">
-    <div class="item">Add to playlist</div>
+    <?php echo Playlist::getPlaylistDropdown($con, $userLoggedIn->getUsername());?>
     <div class="item">item1</div>
     <div class="item">item2</div>
 </nav>

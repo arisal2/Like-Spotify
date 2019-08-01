@@ -18,6 +18,18 @@ const localUrl = {
     deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
 }
 
+$(document).click(function(click) {
+    let target = $(click.target)
+    if (!target.hasClass("item") && !target.hasClass("optionsButton")) {
+        hideOptions()
+    }
+})
+
+$(window).scroll(function() {
+    hideOptions()
+})
+
+
 openPage = (url) => {
 
     if (url.indexOf("?") == -1) {
@@ -72,6 +84,12 @@ deletePlaylist = (playlistId) => {
     }
 }
 
+hideOptions = () => {
+    let menu = $(".optionsMenu")
+    if (menu.css("display") != "none") {
+        menu.css("display", "none")
+    }
+}
 
 showOptionsMenu = (button) => {
 
