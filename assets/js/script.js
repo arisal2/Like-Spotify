@@ -40,12 +40,14 @@ createPlaylist = () => {
 
         $.post(localUrl['createPlaylist'], playlistData)
             .done(function(error) {
+                error = error.replace(/\n/ig, '')
                 if (error != "") {
                     alert(error)
                     return
                 }
                 openPage("yourMusic.php")
             })
+
     }
 }
 
@@ -59,12 +61,14 @@ deletePlaylist = (playlistId) => {
 
         $.post(localUrl['deletePlaylist'], deleteData)
             .done(function(error) {
+                error = error.replace(/\n/ig, '')
                 if (error != "") {
                     alert(error)
                     return
                 }
                 openPage("yourMusic.php")
-            })
+            });
+
     }
 }
 
