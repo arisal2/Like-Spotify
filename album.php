@@ -54,7 +54,7 @@ $artistId = $artist->getId();
                     </div>
 
                     <div class='trackOptions'>
-                        <img class='optionsButton' src='assets/images/icons/more.png'>
+                        <img class='optionsButton' src='assets/images/icons/more.png' onclick='showOptionsMenu(this)'>
                     </div>
 
                     <div class='trackDuration'>
@@ -77,3 +77,9 @@ $artistId = $artist->getId();
     </ul>
 </div>
 
+<nav class="optionsMenu">
+    <input type="hidden" class="songId">
+    <div class="item">Add to playlist</div>
+    <div class="item">item1</div>
+    <div class="item">item2</div>
+</nav>
