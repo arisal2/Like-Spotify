@@ -18,6 +18,18 @@ const localUrl = {
     deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
 }
 
+$(document).click(function(click) {
+    let target = $(click.target)
+    if (!target.hasClass("item") && !target.hasClass("optionsButton")) {
+        hideOptions()
+    }
+})
+
+$(window).scroll(function() {
+    hideOptions()
+})
+
+
 openPage = (url) => {
 
     if (url.indexOf("?") == -1) {
@@ -40,12 +52,14 @@ createPlaylist = () => {
 
         $.post(localUrl['createPlaylist'], playlistData)
             .done(function(error) {
+                error = error.replace(/\n/ig, '')
                 if (error != "") {
                     alert(error)
                     return
                 }
                 openPage("yourMusic.php")
             })
+
     }
 }
 
@@ -59,13 +73,37 @@ deletePlaylist = (playlistId) => {
 
         $.post(localUrl['deletePlaylist'], deleteData)
             .done(function(error) {
+                error = error.replace(/\n/ig, '')
                 if (error != "") {
                     alert(error)
                     return
                 }
                 openPage("yourMusic.php")
-            })
+            });
+
     }
+}
+
+hideOptions = () => {
+    let menu = $(".optionsMenu")
+    if (menu.css("display") != "none") {
+        menu.css("display", "none")
+    }
+}
+
+showOptionsMenu = (button) => {
+
+    let menu = $(".optionsMenu")
+    let menuWidth = menu.width()
+
+    let scrollTop = $(window).scrollTop() //Distance from top of window to top of document
+    let elementOffset = $(button).offset().top //Distance from top of document
+
+    let top = elementOffset - scrollTop
+    let left = $(button).position().left
+
+    menu.css({ "top": top + "px", "left": left - menuWidth + "px", "display": "inline" })
+
 }
 
 formatTime = (second) => {
