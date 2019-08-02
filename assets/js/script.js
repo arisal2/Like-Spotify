@@ -9,13 +9,17 @@ var shuffle = false
 var userLoggedIn
 var timer
 
-const localUrl = {
+const routes = {
     songUrl: "includes/handlers/ajax/getSongJson.php",
     artistUrl: "includes/handlers/ajax/getArtistJson.php",
     albumUrl: "includes/handlers/ajax/getAlbumJson.php",
     updatePlaysUrl: "includes/handlers/ajax/updatePlays.php",
     createPlaylist: "includes/handlers/ajax/createPlaylist.php",
     deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
+    addToPlaylist: "includes/handlers/ajax/addToPlaylist.php",
+    removeFromPlaylist: "includes/handlers/ajax/removeFromPlaylist.php",
+    logout: "includes/handlers/ajax/logout.php",
+    updateEmail: "includes/handlers/ajax/updateEmail.php"
 }
 
 $(document).click(function(click) {
@@ -29,6 +33,30 @@ $(window).scroll(function() {
     hideOptions()
 })
 
+$(document).on("change", "select.playlist", function() {
+
+    let select = $(this)
+    let playlistId = select.val()
+    let songId = select.prev(".songId").val()
+
+    let addToPlaylistData = {
+        songId: songId,
+        playlistId: playlistId
+    }
+
+    $.post(routes['addToPlaylist'], addToPlaylistData).done(function(error) {
+
+        error = error.replace(/\n/ig, '')
+        if (error != '') {
+            alert(error)
+            return
+        }
+
+        hideOptions()
+        select.val("")
+
+    })
+})
 
 openPage = (url) => {
 
@@ -42,6 +70,48 @@ openPage = (url) => {
     history.pushState(null, null, url)
 }
 
+updateEmail = (emailClass) => {
+
+    let emailValue = $("." + emailClass).val()
+
+    emailData = {
+        emailValue: emailValue,
+        username: userLoggedIn
+    }
+
+    $.post(routes['updateEmail'], emailData).done(function(response) {
+        $("." + emailClass).nextUntil(".message").text(response)
+    })
+
+}
+
+logout = () => {
+    $.post(routes['logout'], function() {
+        location.reload()
+    })
+}
+
+removeFromPlaylist = (button, playlistId) => {
+
+    let songId = $(button).prevAll(".songId").val()
+
+    let removeFromPlaylistData = {
+        songId: songId,
+        playlistId: playlistId
+    }
+
+    $.post(routes['removeFromPlaylist'], removeFromPlaylistData)
+        .done(function(error) {
+            error = error.replace(/\n/ig, '')
+            if (error != "") {
+                alert(error)
+                return
+            }
+            openPage("playlist.php?id=" + playlistId)
+        })
+
+}
+
 createPlaylist = () => {
 
     let popup = prompt("Please enter the name of your playlist")
@@ -50,7 +120,7 @@ createPlaylist = () => {
 
     if (popup != null) {
 
-        $.post(localUrl['createPlaylist'], playlistData)
+        $.post(routes['createPlaylist'], playlistData)
             .done(function(error) {
                 error = error.replace(/\n/ig, '')
                 if (error != "") {
@@ -71,7 +141,7 @@ deletePlaylist = (playlistId) => {
 
     if (prompt) {
 
-        $.post(localUrl['deletePlaylist'], deleteData)
+        $.post(routes['deletePlaylist'], deleteData)
             .done(function(error) {
                 error = error.replace(/\n/ig, '')
                 if (error != "") {
@@ -79,7 +149,7 @@ deletePlaylist = (playlistId) => {
                     return
                 }
                 openPage("yourMusic.php")
-            });
+            })
 
     }
 }
@@ -93,14 +163,16 @@ hideOptions = () => {
 
 showOptionsMenu = (button) => {
 
+    let songId = $(button).prevAll(".songId").val()
+
     let menu = $(".optionsMenu")
     let menuWidth = menu.width()
+    menu.find(".songId").val(songId)
+    let left = $(button).position().left
 
     let scrollTop = $(window).scrollTop() //Distance from top of window to top of document
     let elementOffset = $(button).offset().top //Distance from top of document
-
     let top = elementOffset - scrollTop
-    let left = $(button).position().left
 
     menu.css({ "top": top + "px", "left": left - menuWidth + "px", "display": "inline" })
 

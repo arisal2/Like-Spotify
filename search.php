@@ -11,9 +11,9 @@ if(isset($_GET['term'])){
 
 <div class="searchContainer">
 
-<h4>Search for an artist, album or song</h4>
+    <h4>Search for an artist, album or song</h4>
 
-<input type="text" class="searchInput" value="<?php echo $term ?>" placeholder="Start typing..."  onfocus="this.value = this.value">
+    <input type="text" class="searchInput" value="<?php echo $term ?>" placeholder="Start typing..."  onfocus="this.value = this.value">
 
 </div>
 
@@ -84,7 +84,8 @@ if($term == "") exit();
                     </div>
 
                     <div class='trackOptions'>
-                        <img class='optionsButton' src='assets/images/icons/more.png'>
+                        <input type='hidden' class='songId' value='". $albumSong->getId() ."'>
+                        <img class='optionsButton' src='assets/images/icons/more.png' onclick='showOptionsMenu(this)'>
                     </div>
 
                     <div class='trackDuration'>
@@ -161,3 +162,8 @@ if($term == "") exit();
         }
     ?> 
 </div>
+
+<nav class="optionsMenu">
+    <input type="hidden" class="songId">
+    <?php echo Playlist::getPlaylistDropdown($con, $userLoggedIn->getUsername());?>
+</nav>
