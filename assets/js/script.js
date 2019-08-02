@@ -19,6 +19,7 @@ const routes = {
     addToPlaylist: "includes/handlers/ajax/addToPlaylist.php",
     removeFromPlaylist: "includes/handlers/ajax/removeFromPlaylist.php",
     logout: "includes/handlers/ajax/logout.php",
+    updateEmail: "includes/handlers/ajax/updateEmail.php"
 }
 
 $(document).click(function(click) {
@@ -69,15 +70,30 @@ openPage = (url) => {
     history.pushState(null, null, url)
 }
 
+updateEmail = (emailClass) => {
+
+    let emailValue = $("." + emailClass).val()
+
+    emailData = {
+        emailValue: emailValue,
+        username: userLoggedIn
+    }
+
+    $.post(routes['updateEmail'], emailData).done(function(response) {
+        $("." + emailClass).nextUntil(".message").text(response)
+    })
+
+}
+
 logout = () => {
     $.post(routes['logout'], function() {
-        location.reload();
+        location.reload()
     })
 }
 
 removeFromPlaylist = (button, playlistId) => {
 
-    let songId = $(button).prevAll(".songId").val();
+    let songId = $(button).prevAll(".songId").val()
 
     let removeFromPlaylistData = {
         songId: songId,
@@ -133,7 +149,7 @@ deletePlaylist = (playlistId) => {
                     return
                 }
                 openPage("yourMusic.php")
-            });
+            })
 
     }
 }
