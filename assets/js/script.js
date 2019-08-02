@@ -32,8 +32,9 @@ $(window).scroll(function() {
 
 $(document).on("change", "select.playlist", function() {
 
-    let playlistId = $(this).val()
-    let songId = $(this).prev(".songId").val()
+    let select = $(this)
+    let playlistId = select.val()
+    let songId = select.prev(".songId").val()
 
     let addToPlaylistData = {
         songId: songId,
@@ -48,7 +49,7 @@ $(document).on("change", "select.playlist", function() {
         }
 
         hideOptions()
-        $(this).val("")
+        select.val("")
 
     })
 })
