@@ -84,7 +84,8 @@ if($term == "") exit();
                     </div>
 
                     <div class='trackOptions'>
-                        <img class='optionsButton' src='assets/images/icons/more.png'>
+                        <input type='hidden' class='songId' value='". $albumSong->getId() ."'>
+                        <img class='optionsButton' src='assets/images/icons/more.png' onclick='showOptionsMenu(this)'>
                     </div>
 
                     <div class='trackDuration'>
@@ -161,3 +162,8 @@ if($term == "") exit();
         }
     ?> 
 </div>
+
+<nav class="optionsMenu">
+    <input type="hidden" class="songId">
+    <?php echo Playlist::getPlaylistDropdown($con, $userLoggedIn->getUsername());?>
+</nav>
