@@ -101,8 +101,8 @@ DROP TABLE IF EXISTS `playlistSongs`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `playlistSongs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `songid` int(11) DEFAULT NULL,
-  `playlistid` int(11) DEFAULT NULL,
+  `songId` int(11) DEFAULT NULL,
+  `playlistId` int(11) DEFAULT NULL,
   `playlistOrder` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
