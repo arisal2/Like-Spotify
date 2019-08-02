@@ -16,7 +16,8 @@ const localUrl = {
     updatePlaysUrl: "includes/handlers/ajax/updatePlays.php",
     createPlaylist: "includes/handlers/ajax/createPlaylist.php",
     deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
-    addToPlaylist: "includes/handlers/ajax/addToPlaylist.php"
+    addToPlaylist: "includes/handlers/ajax/addToPlaylist.php",
+    removeFromPlaylist: "includes/handlers/ajax/removeFromPlaylist.php"
 }
 
 $(document).click(function(click) {
@@ -40,6 +41,7 @@ $(document).on("change", "select.playlist", function() {
         songId: songId,
         playlistId: playlistId
     }
+
     $.post(localUrl['addToPlaylist'], addToPlaylistData).done(function(error) {
 
         error = error.replace(/\n/ig, '')
@@ -64,6 +66,27 @@ openPage = (url) => {
     $("#mainContent").load(encodedUrl)
     $("body").scrollTop(0)
     history.pushState(null, null, url)
+}
+
+removeFromPlaylist = (button, playlistId) => {
+
+    let songId = $(button).prevAll(".songId").val();
+
+    let removeFromPlaylistData = {
+        songId: songId,
+        playlistId: playlistId
+    }
+
+    $.post(localUrl['removeFromPlaylist'], removeFromPlaylistData)
+        .done(function(error) {
+            error = error.replace(/\n/ig, '')
+            if (error != "") {
+                alert(error)
+                return
+            }
+            openPage("playlist.php?id=" + playlistId)
+        })
+
 }
 
 createPlaylist = () => {
