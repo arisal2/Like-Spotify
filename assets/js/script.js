@@ -16,6 +16,7 @@ const localUrl = {
     updatePlaysUrl: "includes/handlers/ajax/updatePlays.php",
     createPlaylist: "includes/handlers/ajax/createPlaylist.php",
     deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
+    addToPlaylist: "includes/handlers/ajax/addToPlaylist.php"
 }
 
 $(document).click(function(click) {
@@ -29,6 +30,28 @@ $(window).scroll(function() {
     hideOptions()
 })
 
+$(document).on("change", "select.playlist", function() {
+
+    let playlistId = $(this).val()
+    let songId = $(this).prev(".songId").val()
+
+    let addToPlaylistData = {
+        songId: songId,
+        playlistId: playlistId
+    }
+    $.post(localUrl['addToPlaylist'], addToPlaylistData).done(function(error) {
+
+        error = error.replace(/\n/ig, '')
+        if (error != '') {
+            alert(error)
+            return
+        }
+
+        hideOptions()
+        $(this).val("")
+
+    })
+})
 
 openPage = (url) => {
 
@@ -93,14 +116,16 @@ hideOptions = () => {
 
 showOptionsMenu = (button) => {
 
+    let songId = $(button).prevAll(".songId").val()
+
     let menu = $(".optionsMenu")
     let menuWidth = menu.width()
+    menu.find(".songId").val(songId)
+    let left = $(button).position().left
 
     let scrollTop = $(window).scrollTop() //Distance from top of window to top of document
     let elementOffset = $(button).offset().top //Distance from top of document
-
     let top = elementOffset - scrollTop
-    let left = $(button).position().left
 
     menu.css({ "top": top + "px", "left": left - menuWidth + "px", "display": "inline" })
 
