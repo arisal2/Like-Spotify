@@ -160,7 +160,7 @@ setTrack = (trackId, newPlaylist, play) => {
         songId: trackId 
     }
 
-    $.post(localUrl['songUrl'], songData, function(data) {
+    $.post(routes['songUrl'], songData, function(data) {
 
         let track = JSON.parse(data)
 
@@ -174,13 +174,13 @@ setTrack = (trackId, newPlaylist, play) => {
 
         $(".trackName span").text(track.title)
 
-        $.post(localUrl['artistUrl'], artistData, function(data) { 
+        $.post(routes['artistUrl'], artistData, function(data) { 
             let artist = JSON.parse(data)
             $(".trackInfo .artistName span").text(artist.name)
             $(".trackInfo .artistName span").attr("onclick", "openPage('artist.php?id="+ artist.id +"')")
         })
 
-        $.post(localUrl['albumUrl'], albumData, function(data) {
+        $.post(routes['albumUrl'], albumData, function(data) {
             let album = JSON.parse(data)
             $(".content .albumLink img").attr("src", album.artworkPath)
             $(".content .albumLink img").attr("onclick", "openPage('album.php?id="+ album.id +"')")
@@ -199,7 +199,7 @@ setTrack = (trackId, newPlaylist, play) => {
 
 playSong = () => {
     if(audioElement.audio.currentTime == 0){
-       $.post(localUrl["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
+       $.post(routes["updatePlaysUrl"],  {songId: audioElement.currentlyPlaying.id })
     }
     $(".controlButton.play").hide()
     $(".controlButton.pause").show()

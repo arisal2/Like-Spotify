@@ -9,7 +9,7 @@ var shuffle = false
 var userLoggedIn
 var timer
 
-const localUrl = {
+const routes = {
     songUrl: "includes/handlers/ajax/getSongJson.php",
     artistUrl: "includes/handlers/ajax/getArtistJson.php",
     albumUrl: "includes/handlers/ajax/getAlbumJson.php",
@@ -17,7 +17,8 @@ const localUrl = {
     createPlaylist: "includes/handlers/ajax/createPlaylist.php",
     deletePlaylist: "includes/handlers/ajax/deletePlaylist.php",
     addToPlaylist: "includes/handlers/ajax/addToPlaylist.php",
-    removeFromPlaylist: "includes/handlers/ajax/removeFromPlaylist.php"
+    removeFromPlaylist: "includes/handlers/ajax/removeFromPlaylist.php",
+    logout: "includes/handlers/ajax/logout.php",
 }
 
 $(document).click(function(click) {
@@ -42,7 +43,7 @@ $(document).on("change", "select.playlist", function() {
         playlistId: playlistId
     }
 
-    $.post(localUrl['addToPlaylist'], addToPlaylistData).done(function(error) {
+    $.post(routes['addToPlaylist'], addToPlaylistData).done(function(error) {
 
         error = error.replace(/\n/ig, '')
         if (error != '') {
@@ -68,6 +69,12 @@ openPage = (url) => {
     history.pushState(null, null, url)
 }
 
+logout = () => {
+    $.post(routes['logout'], function() {
+        location.reload();
+    })
+}
+
 removeFromPlaylist = (button, playlistId) => {
 
     let songId = $(button).prevAll(".songId").val();
@@ -77,7 +84,7 @@ removeFromPlaylist = (button, playlistId) => {
         playlistId: playlistId
     }
 
-    $.post(localUrl['removeFromPlaylist'], removeFromPlaylistData)
+    $.post(routes['removeFromPlaylist'], removeFromPlaylistData)
         .done(function(error) {
             error = error.replace(/\n/ig, '')
             if (error != "") {
@@ -97,7 +104,7 @@ createPlaylist = () => {
 
     if (popup != null) {
 
-        $.post(localUrl['createPlaylist'], playlistData)
+        $.post(routes['createPlaylist'], playlistData)
             .done(function(error) {
                 error = error.replace(/\n/ig, '')
                 if (error != "") {
@@ -118,7 +125,7 @@ deletePlaylist = (playlistId) => {
 
     if (prompt) {
 
-        $.post(localUrl['deletePlaylist'], deleteData)
+        $.post(routes['deletePlaylist'], deleteData)
             .done(function(error) {
                 error = error.replace(/\n/ig, '')
                 if (error != "") {
