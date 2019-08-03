@@ -19,7 +19,8 @@ const routes = {
     addToPlaylist: "includes/handlers/ajax/addToPlaylist.php",
     removeFromPlaylist: "includes/handlers/ajax/removeFromPlaylist.php",
     logout: "includes/handlers/ajax/logout.php",
-    updateEmail: "includes/handlers/ajax/updateEmail.php"
+    updateEmail: "includes/handlers/ajax/updateEmail.php",
+    updatePassword: "includes/handlers/ajax/updatePassword.php"
 }
 
 $(document).click(function(click) {
@@ -74,13 +75,32 @@ updateEmail = (emailClass) => {
 
     let emailValue = $("." + emailClass).val()
 
-    emailData = {
+    let emailData = {
         emailValue: emailValue,
         username: userLoggedIn
     }
 
     $.post(routes['updateEmail'], emailData).done(function(response) {
-        $("." + emailClass).nextUntil(".message").text(response)
+        $("." + emailClass).nextAll(".message").text(response)
+    })
+
+}
+
+updatePassword = (oldPasswordClass, newPasswordClass1, newPasswordClass2) => {
+
+    let oldPassword = $("." + oldPasswordClass).val()
+    let newPassword1 = $("." + newPasswordClass1).val()
+    let newPassword2 = $("." + newPasswordClass2).val()
+
+    let passwordData = {
+        oldPassword: oldPassword,
+        newPassword1: newPassword1,
+        newPassword2: newPassword2,
+        username: userLoggedIn
+    }
+
+    $.post(routes['updatePassword'], passwordData).done(function(response) {
+        $("." + oldPasswordClass).nextAll(".message").text(response)
     })
 
 }
