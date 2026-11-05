@@ -24,7 +24,7 @@ class FakeAudio extends EventTarget {
 const songs: Song[] = [1, 2, 3].map((id) => ({
   id,
   title: `Song ${id}`,
-  artist: "Bensound",
+  artist: "Demo artist",
   album: "Demo",
   albumId: 1,
   duration: 200,

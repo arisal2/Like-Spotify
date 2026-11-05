@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  if (process.env.E2E_AUDIO_FIXTURE !== '1') return;
+  await page.route('**/api/v1/catalog', async (route) => {
+    const response = await route.fetch();
+    const catalog = await response.json();
+    catalog.songs[0].audio = '/media/music/ci-tone.wav';
+    await route.fulfill({ response, json: catalog });
+  });
+});
+
 test('listener can save music, curate a mix, and return after signing out', async ({ page }) => {
   const username = `listener_${Date.now()}`;
   await page.goto('/');
@@ -26,6 +36,7 @@ test('listener can save music, curate a mix, and return after signing out', asyn
   await expect(page.getByRole('button', { name: 'Play Acoustic Breeze', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Play Acoustic Breeze', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Seek')).toBeEnabled();
   await page.getByRole('link', { name: 'Discover', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /A mix that gets you/ }).click();
@@ -51,4 +62,5 @@ test('catalog and player fit a mobile viewport', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Press play', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Seek')).toBeEnabled();
 });
