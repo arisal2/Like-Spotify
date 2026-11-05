@@ -38,6 +38,26 @@ kubectl logs statefulset/mysql -n like-spotify --tail=200
 kubectl get events -n like-spotify --sort-by=.lastTimestamp
 ```
 
+### Routine GitOps check
+
+Use this sequence after a merge or when the UI is unavailable:
+
+```bash
+git ls-remote origin refs/heads/master refs/heads/deploy/local
+kubectl get application like-spotify -n argocd \
+  -o custom-columns=SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision
+kubectl get deployment,statefulset,pod,job -n like-spotify
+kubectl get svc web-local -n like-spotify
+```
+
+The `deploy/local` revision and Argo CD's reported revision should converge
+after **Build and promote** completes. A healthy cluster can legitimately lag
+`master` when the merge changed documentation only or when a newer workflow is
+still running.
+
+Avoid editing Argo-managed workloads with `kubectl edit`, `set image`, or
+long-lived patches. Self-heal will reverse drift; durable changes belong in Git.
+
 ## Data that must survive
 
 - MySQL: accounts, sessions, playlists, likes, mixes, feedback, and history.
@@ -107,6 +127,9 @@ state explicit.
   `COOKIE_SECURE`, and the CSRF header.
 - App loads but API returns 502: verify API pods/containers and nginx's `api`
   service resolution.
+- Argo CD UI is unavailable: inspect `argocd-server` and `argocd-local` in the
+  `argocd` namespace; the persistent endpoint is a LoadBalancer, not a port
+  forward.
 
 ## Before public exposure
 

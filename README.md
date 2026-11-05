@@ -110,6 +110,18 @@ Start with [Argo CD and local Kubernetes](docs/argo-cd.md), then use the
 [GitHub Actions and GitOps guide](docs/github-actions.md) to configure branch
 protection and delivery.
 
+First-time setup is performed in this order:
+
+1. Enable Docker Desktop Kubernetes and verify the `docker-desktop` context.
+2. Let a successful `master` workflow create `deploy/local` and publish images.
+3. Install the pinned Argo CD release.
+4. Create the uncommitted Kubernetes application Secret.
+5. Apply `deploy/argocd` and wait for the application to become healthy.
+6. Import permitted media into the persistent volume and verify both URLs.
+
+The [local deployment guide](docs/argo-cd.md) includes every command, expected
+result, private-GHCR notes, troubleshooting, upgrades, and teardown.
+
 ## Documentation
 
 - [Product suite PRD](docs/product-suite-prd.md)

@@ -118,6 +118,21 @@ kubectl kustomize deploy/argocd >/tmp/like-argocd.yaml
 
 Never commit `deploy/k8s/local/secrets.env` with real values.
 
+Rendering proves that Kustomize input is valid; it does not install Argo CD or
+publish images. For an optional manual cluster smoke test, build the local
+images before applying the local overlay:
+
+```bash
+docker build -f backend/Dockerfile -t like-spotify-api:local .
+docker build -f web/Dockerfile -t like-spotify-web:local .
+kubectl apply -k deploy/k8s/local
+kubectl apply -f deploy/k8s/migration-job.yaml
+```
+
+Use [the Argo CD guide](argo-cd.md) for the persistent GitOps deployment. Do
+not manually apply the GitOps overlay: Argo CD owns it and obtains its exact
+image tags from `deploy/local`.
+
 ## Change workflow
 
 1. Branch from current `master`.

@@ -27,3 +27,20 @@ Use this page as the entry point for operating and changing Like.
 Documentation must describe checked-in behavior. Update the relevant guide in
 the same pull request when commands, environment variables, endpoints,
 deployment behavior, or operational procedures change.
+
+## Local deployment map
+
+Use these guides in order for a new machine:
+
+1. [Development](development.md) to validate tools, tests, and manifest
+   rendering.
+2. [GitHub Actions](github-actions.md) to configure repository permissions and
+   the required branch-protection check.
+3. [Argo CD](argo-cd.md) to install the controller, create runtime secrets,
+   bootstrap the application, import media, and verify persistent endpoints.
+4. [Operations](operations.md) for routine health checks, backups, rollback,
+   and incident diagnosis.
+
+`deploy/k8s/local` is a manual pre-merge smoke-test overlay.
+`deploy/k8s/gitops` on `deploy/local` is the desired state used by Argo CD.
+Do not operate both as competing deployment methods.

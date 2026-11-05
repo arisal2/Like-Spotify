@@ -10,21 +10,32 @@ pull request → checks → merge to master → checks → publish images
 
 ## 1. Configure GitHub
 
-1. Enable GitHub Actions for the repository and allow the actions referenced
-   by the workflows.
-2. Protect `master` with a pull-request requirement and require the jobs from
-   `Test and package` to pass. Do not grant a bypass to untrusted actors.
-3. Allow the workflow's `GITHUB_TOKEN` to write repository contents and packages
-   where needed. The delivery workflow explicitly requests those permissions;
-   organization or repository policies can still restrict them.
-4. Confirm the GHCR packages are accessible from the local cluster. Public
+1. In **Settings → Actions → General**, enable Actions and permit the actions
+   used by `.github/workflows`.
+2. Under **Workflow permissions**, select **Read and write permissions**. The
+   delivery workflow needs repository contents write access for `deploy/local`
+   and packages write access for GHCR. Workflow YAML still declares the minimum
+   permissions it uses.
+3. In **Settings → Branches** (or a repository ruleset), protect `master`:
+   require a pull request, require approval as appropriate, require branches to
+   be up to date if desired, and require the `ci-gate` status check from
+   **Test and package**. Do not require every conditional job; unaffected jobs
+   are intentionally skipped.
+4. Do not apply a rule to `deploy/local` that prevents `github-actions[bot]`
+   from updating it, or explicitly allow that automation actor. Never merge
+   feature work into this generated branch.
+5. Confirm the GHCR packages are accessible from the local cluster. Public
    images require no pull secret; private images need a scoped registry pull
    secret on the API, web, and migration pods.
-5. Install the Argo application using the [local cluster guide](argo-cd.md).
+6. Install the Argo application using the [local cluster guide](argo-cd.md).
 
 No personal GitHub token is required by the checked-in workflow. Do not put
 database passwords, AI keys, or media in repository secrets or Git unless they
 are explicitly needed by a workflow.
+
+After saving these settings, open a pull request and confirm `ci-gate` appears
+as the required check before relying on the rule. GitHub cannot select a status
+check that has never run in the repository.
 
 ## 2. Understand the workflows
 
@@ -72,6 +83,11 @@ dependency update PRs; review their changelogs and checks before merging.
 4. Watch `Test and package`, followed by `Build and promote`, in the Actions
    tab. A failed check prevents deployment.
 5. Confirm Argo sync and workload readiness with the commands in the Argo guide.
+
+For the first deployment, `deploy/local` may not exist until an application or
+`deploy/**` change is merged. A docs-only merge intentionally runs no
+promotion. Once created, the branch is automation-owned desired state; Argo CD
+watches it continuously.
 
 The Docker build stages run on the builder's native architecture. The Go
 binary is cross-compiled for each target; the static web bundle is built
