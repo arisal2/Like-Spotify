@@ -104,7 +104,9 @@ The CI workflow generates a deterministic 30-second PCM WAV using
 `web/e2e/generate-audio.mjs`, points only the test browser catalog at that file,
 and verifies that real media metadata loads. CI runs the browser against native
 Go and Vite with a MySQL service; production container builds run in a separate
-path-aware job. No copyrighted fixture is stored in Git.
+path-aware job. Pull requests use the fast component checks; the full browser
+journey runs on `master` before image publication and on tagged releases. No
+copyrighted fixture is stored in Git.
 
 ### Kubernetes manifests
 

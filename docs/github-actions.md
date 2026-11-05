@@ -34,16 +34,21 @@ changed paths:
 
 | Changed paths                            | Selected checks                   |
 | ---------------------------------------- | --------------------------------- |
-| `backend/**`                             | backend, browser, security        |
-| `web/**`                                 | frontend, browser, security       |
+| `backend/**`                             | backend, containers, security     |
+| `web/**`                                 | frontend, containers, security    |
 | `deploy/**`                              | Kubernetes rendering and security |
 | workflow or shared runtime configuration | full relevant suite               |
 | Markdown only                            | documentation formatting          |
 
+Pull requests deliberately omit the full browser journey to keep feedback near
+one minute. After merge, the `master` run adds browser E2E for backend or web
+changes. Delivery starts only after that run succeeds, so browser coverage is a
+deployment gate rather than a pull-request bottleneck. Tagged releases also run
+the full suite through the reusable workflow.
+
 The final `ci-gate` job fails if any selected job fails and accepts jobs that
 were intentionally skipped. Make `ci-gate` the required branch-protection
-check instead of requiring every component job individually. Reusable workflow
-calls, including tagged releases, deliberately run the full suite.
+check instead of requiring every component job individually.
 
 Browser tests generate a temporary WAV tone with Node and exercise native Go,
 Vite, and a MySQL service. Production container builds run separately, in

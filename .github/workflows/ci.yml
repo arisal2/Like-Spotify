@@ -65,23 +65,29 @@ jobs:
             while IFS= read -r path; do
               case "$path" in
                 backend/*)
-                  backend=true; browser=true; security=true; container_api=true ;;
+                  backend=true; security=true; container_api=true ;;
                 web/*)
-                  frontend=true; browser=true; security=true; container_web=true ;;
+                  frontend=true; security=true; container_web=true ;;
                 deploy/*)
                   kubernetes=true; security=true ;;
                 .github/workflows/*)
-                  backend=true; frontend=true; browser=true; kubernetes=true; security=true; container_api=true; container_web=true ;;
+                  backend=true; frontend=true; kubernetes=true; security=true; container_api=true; container_web=true ;;
                 .dockerignore)
-                  backend=true; frontend=true; browser=true; security=true; container_api=true; container_web=true ;;
+                  backend=true; frontend=true; security=true; container_api=true; container_web=true ;;
                 .github/dependabot.yml|compose.yaml|.env.example)
-                  backend=true; frontend=true; browser=true; security=true ;;
+                  backend=true; frontend=true; security=true ;;
                 *.md|docs/*)
                   documentation=true ;;
                 *)
                   security=true ;;
               esac
             done < <(git diff --name-only "$base" "$head")
+          fi
+
+          # Pull requests stay fast. The same selected component changes run
+          # the full browser journey after merge, before delivery can start.
+          if [ "$EVENT_NAME" != 'pull_request' ] && { [ "$backend" = true ] || [ "$frontend" = true ]; }; then
+            browser=true
           fi
 
           container_images=false
