@@ -1,0 +1,470 @@
+[
+  {
+    "id": 1,
+    "title": "Acoustic Breeze",
+    "artist": "Bensound",
+    "album": "Best of the Worst",
+    "albumId": 5,
+    "duration": 157,
+    "artwork": "/media/artwork/popdance.jpg",
+    "audio": "/media/music/bensound-acousticbreeze.mp3",
+    "tags": [
+      "acoustic",
+      "calm",
+      "focus",
+      "morning"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "A new beginning",
+    "artist": "Bensound",
+    "album": "Best of the Worst",
+    "albumId": 5,
+    "duration": 155,
+    "artwork": "/media/artwork/popdance.jpg",
+    "audio": "/media/music/bensound-anewbeginning.mp3",
+    "tags": [
+      "uplifting",
+      "cinematic",
+      "hopeful"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Better Days",
+    "artist": "Bensound",
+    "album": "Best of the Worst",
+    "albumId": 5,
+    "duration": 153,
+    "artwork": "/media/artwork/popdance.jpg",
+    "audio": "/media/music/bensound-betterdays.mp3",
+    "tags": [
+      "calm",
+      "acoustic",
+      "focus"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Buddy",
+    "artist": "Bensound",
+    "album": "Best of the Worst",
+    "albumId": 5,
+    "duration": 122,
+    "artwork": "/media/artwork/popdance.jpg",
+    "audio": "/media/music/bensound-buddy.mp3",
+    "tags": [
+      "happy",
+      "acoustic",
+      "morning"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Clear Day",
+    "artist": "Bensound",
+    "album": "Best of the Worst",
+    "albumId": 5,
+    "duration": 89,
+    "artwork": "/media/artwork/popdance.jpg",
+    "audio": "/media/music/bensound-clearday.mp3",
+    "tags": [
+      "happy",
+      "calm",
+      "morning"
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Going Higher",
+    "artist": "Bensound",
+    "album": "Bacon and Eggs",
+    "albumId": 1,
+    "duration": 244,
+    "artwork": "/media/artwork/clearday.jpg",
+    "audio": "/media/music/bensound-goinghigher.mp3",
+    "tags": [
+      "rock",
+      "energy",
+      "workout"
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Funny Song",
+    "artist": "Bensound",
+    "album": "The movie soundtrack",
+    "albumId": 4,
+    "duration": 187,
+    "artwork": "/media/artwork/funkyelement.jpg",
+    "audio": "/media/music/bensound-funnysong.mp3",
+    "tags": [
+      "happy",
+      "playful"
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Funky Element",
+    "artist": "Bensound",
+    "album": "Bacon and Eggs",
+    "albumId": 1,
+    "duration": 188,
+    "artwork": "/media/artwork/clearday.jpg",
+    "audio": "/media/music/bensound-funkyelement.mp3",
+    "tags": [
+      "funk",
+      "energy",
+      "dance"
+    ]
+  },
+  {
+    "id": 9,
+    "title": "Extreme Action",
+    "artist": "Bensound",
+    "album": "Bacon and Eggs",
+    "albumId": 1,
+    "duration": 483,
+    "artwork": "/media/artwork/clearday.jpg",
+    "audio": "/media/music/bensound-extremeaction.mp3",
+    "tags": [
+      "energy",
+      "cinematic",
+      "workout"
+    ]
+  },
+  {
+    "id": 10,
+    "title": "Epic",
+    "artist": "Bensound",
+    "album": "The movie soundtrack",
+    "albumId": 4,
+    "duration": 178,
+    "artwork": "/media/artwork/funkyelement.jpg",
+    "audio": "/media/music/bensound-epic.mp3",
+    "tags": [
+      "cinematic",
+      "epic",
+      "orchestral"
+    ]
+  },
+  {
+    "id": 11,
+    "title": "Energy",
+    "artist": "Bensound",
+    "album": "Bacon and Eggs",
+    "albumId": 1,
+    "duration": 179,
+    "artwork": "/media/artwork/clearday.jpg",
+    "audio": "/media/music/bensound-energy.mp3",
+    "tags": [
+      "rock",
+      "energy",
+      "workout"
+    ]
+  },
+  {
+    "id": 12,
+    "title": "Dubstep",
+    "artist": "Bensound",
+    "album": "Bacon and Eggs",
+    "albumId": 1,
+    "duration": 123,
+    "artwork": "/media/artwork/clearday.jpg",
+    "audio": "/media/music/bensound-dubstep.mp3",
+    "tags": [
+      "electronic",
+      "energy",
+      "dance"
+    ]
+  },
+  {
+    "id": 13,
+    "title": "Happiness",
+    "artist": "Bensound",
+    "album": "Hello World",
+    "albumId": 6,
+    "duration": 261,
+    "artwork": "/media/artwork/ukulele.jpg",
+    "audio": "/media/music/bensound-happiness.mp3",
+    "tags": [
+      "happy",
+      "acoustic",
+      "morning"
+    ]
+  },
+  {
+    "id": 14,
+    "title": "Happy Rock",
+    "artist": "Bensound",
+    "album": "Hello World",
+    "albumId": 6,
+    "duration": 105,
+    "artwork": "/media/artwork/ukulele.jpg",
+    "audio": "/media/music/bensound-happyrock.mp3",
+    "tags": [
+      "rock",
+      "energy",
+      "happy"
+    ]
+  },
+  {
+    "id": 15,
+    "title": "Jazzy Frenchy",
+    "artist": "Bensound",
+    "album": "Hello World",
+    "albumId": 6,
+    "duration": 104,
+    "artwork": "/media/artwork/ukulele.jpg",
+    "audio": "/media/music/bensound-jazzyfrenchy.mp3",
+    "tags": [
+      "jazz",
+      "happy",
+      "cafe"
+    ]
+  },
+  {
+    "id": 16,
+    "title": "Little Idea",
+    "artist": "Bensound",
+    "album": "Hello World",
+    "albumId": 6,
+    "duration": 169,
+    "artwork": "/media/artwork/ukulele.jpg",
+    "audio": "/media/music/bensound-littleidea.mp3",
+    "tags": [
+      "happy",
+      "acoustic",
+      "focus"
+    ]
+  },
+  {
+    "id": 17,
+    "title": "Memories",
+    "artist": "Bensound",
+    "album": "Hello World",
+    "albumId": 6,
+    "duration": 230,
+    "artwork": "/media/artwork/ukulele.jpg",
+    "audio": "/media/music/bensound-memories.mp3",
+    "tags": [
+      "calm",
+      "piano",
+      "reflective",
+      "focus"
+    ]
+  },
+  {
+    "id": 18,
+    "title": "Moose",
+    "artist": "Bensound",
+    "album": "Best beats",
+    "albumId": 7,
+    "duration": 163,
+    "artwork": "/media/artwork/sweet.jpg",
+    "audio": "/media/music/bensound-moose.mp3",
+    "tags": [
+      "electronic",
+      "energy",
+      "dance"
+    ]
+  },
+  {
+    "id": 19,
+    "title": "November",
+    "artist": "Bensound",
+    "album": "Best beats",
+    "albumId": 7,
+    "duration": 212,
+    "artwork": "/media/artwork/sweet.jpg",
+    "audio": "/media/music/bensound-november.mp3",
+    "tags": [
+      "calm",
+      "piano",
+      "reflective"
+    ]
+  },
+  {
+    "id": 20,
+    "title": "Of Elias Dream",
+    "artist": "Bensound",
+    "album": "Best beats",
+    "albumId": 7,
+    "duration": 298,
+    "artwork": "/media/artwork/sweet.jpg",
+    "audio": "/media/music/bensound-ofeliasdream.mp3",
+    "tags": [
+      "calm",
+      "cinematic",
+      "ambient",
+      "focus"
+    ]
+  },
+  {
+    "id": 21,
+    "title": "Pop Dance",
+    "artist": "Bensound",
+    "album": "Best beats",
+    "albumId": 7,
+    "duration": 162,
+    "artwork": "/media/artwork/sweet.jpg",
+    "audio": "/media/music/bensound-popdance.mp3",
+    "tags": [
+      "pop",
+      "dance",
+      "energy"
+    ]
+  },
+  {
+    "id": 22,
+    "title": "Retro Soul",
+    "artist": "Bensound",
+    "album": "Best beats",
+    "albumId": 7,
+    "duration": 216,
+    "artwork": "/media/artwork/sweet.jpg",
+    "audio": "/media/music/bensound-retrosoul.mp3",
+    "tags": [
+      "soul",
+      "groove",
+      "calm"
+    ]
+  },
+  {
+    "id": 23,
+    "title": "Sad Day",
+    "artist": "Bensound",
+    "album": "Pizza Head",
+    "albumId": 2,
+    "duration": 148,
+    "artwork": "/media/artwork/energy.jpg",
+    "audio": "/media/music/bensound-sadday.mp3",
+    "tags": [
+      "piano",
+      "reflective",
+      "calm"
+    ]
+  },
+  {
+    "id": 24,
+    "title": "Sci-fi",
+    "artist": "Bensound",
+    "album": "Pizza Head",
+    "albumId": 2,
+    "duration": 284,
+    "artwork": "/media/artwork/energy.jpg",
+    "audio": "/media/music/bensound-scifi.mp3",
+    "tags": [
+      "electronic",
+      "ambient",
+      "cinematic"
+    ]
+  },
+  {
+    "id": 25,
+    "title": "Slow Motion",
+    "artist": "Bensound",
+    "album": "Pizza Head",
+    "albumId": 2,
+    "duration": 206,
+    "artwork": "/media/artwork/energy.jpg",
+    "audio": "/media/music/bensound-slowmotion.mp3",
+    "tags": [
+      "ambient",
+      "calm",
+      "focus"
+    ]
+  },
+  {
+    "id": 26,
+    "title": "Sunny",
+    "artist": "Bensound",
+    "album": "Pizza Head",
+    "albumId": 2,
+    "duration": 140,
+    "artwork": "/media/artwork/energy.jpg",
+    "audio": "/media/music/bensound-sunny.mp3",
+    "tags": [
+      "happy",
+      "acoustic",
+      "morning"
+    ]
+  },
+  {
+    "id": 27,
+    "title": "Sweet",
+    "artist": "Bensound",
+    "album": "Pizza Head",
+    "albumId": 2,
+    "duration": 307,
+    "artwork": "/media/artwork/energy.jpg",
+    "audio": "/media/music/bensound-sweet.mp3",
+    "tags": [
+      "calm",
+      "acoustic",
+      "romantic"
+    ]
+  },
+  {
+    "id": 28,
+    "title": "Tenderness",
+    "artist": "Bensound",
+    "album": "Summer Hits",
+    "albumId": 3,
+    "duration": 123,
+    "artwork": "/media/artwork/goinghigher.jpg",
+    "audio": "/media/music/bensound-tenderness.mp3",
+    "tags": [
+      "calm",
+      "acoustic",
+      "focus"
+    ]
+  },
+  {
+    "id": 29,
+    "title": "The Lounge",
+    "artist": "Bensound",
+    "album": "Summer Hits",
+    "albumId": 3,
+    "duration": 256,
+    "artwork": "/media/artwork/goinghigher.jpg",
+    "audio": "/media/music/bensound-thelounge.mp3",
+    "tags": [
+      "jazz",
+      "calm",
+      "cafe",
+      "focus"
+    ]
+  },
+  {
+    "id": 30,
+    "title": "Ukulele",
+    "artist": "Bensound",
+    "album": "Summer Hits",
+    "albumId": 3,
+    "duration": 146,
+    "artwork": "/media/artwork/goinghigher.jpg",
+    "audio": "/media/music/bensound-ukulele.mp3",
+    "tags": [
+      "happy",
+      "acoustic",
+      "morning"
+    ]
+  },
+  {
+    "id": 31,
+    "title": "Tomorrow",
+    "artist": "Bensound",
+    "album": "Summer Hits",
+    "albumId": 3,
+    "duration": 294,
+    "artwork": "/media/artwork/goinghigher.jpg",
+    "audio": "/media/music/bensound-tomorrow.mp3",
+    "tags": [
+      "cinematic",
+      "calm",
+      "hopeful"
+    ]
+  }
+]

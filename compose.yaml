@@ -1,0 +1,80 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-like_spotify}
+      MYSQL_USER: ${MYSQL_USER:-like_spotify}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - '127.0.0.1:3307:3306'
+    healthcheck:
+      test: ['CMD-SHELL', 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u "$$MYSQL_USER" -D "$$MYSQL_DATABASE" -e "SELECT 1"']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+  migrate:
+    image: like-spotify-api:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ['migrate']
+    environment:
+      DATABASE_DSN: '${MYSQL_USER:-like_spotify}:${MYSQL_PASSWORD}@tcp(db:3306)/${MYSQL_DATABASE:-like_spotify}?parseTime=true'
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+  api:
+    image: like-spotify-api:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_DSN: '${MYSQL_USER:-like_spotify}:${MYSQL_PASSWORD}@tcp(db:3306)/${MYSQL_DATABASE:-like_spotify}?parseTime=true'
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+    ports:
+      - '127.0.0.1:8081:8081'
+    volumes:
+      - type: bind
+        source: ${MEDIA_PATH:-./assets}
+        target: /media
+        read_only: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+  web:
+    image: like-spotify-web:local
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    ports:
+      - '127.0.0.1:8080:8080'
+    depends_on:
+      - api
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /var/cache/nginx:size=16m,uid=101,gid=101
+      - /var/run:size=1m,uid=101,gid=101
+volumes:
+  mysql-data:

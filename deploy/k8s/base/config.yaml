@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+data:
+  APP_ORIGIN: http://localhost:8080
+  COOKIE_SECURE: 'false'
+  APP_ENV: development
+  MYSQL_DATABASE: like_spotify
+  MYSQL_USER: like_spotify

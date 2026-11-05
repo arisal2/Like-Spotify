@@ -1,0 +1,120 @@
+name: Test and package
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-test-password
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pci-test-password"
+          --health-interval=5s --health-timeout=3s --health-retries=30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: backend/go.sum
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test -race ./...
+        env:
+          TEST_MYSQL_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/?parseTime=true'
+      - name: Check Go dependencies for known vulnerabilities
+        uses: golang/govulncheck-action@v1
+        with:
+          go-package: ./...
+          work-dir: backend
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: cp .env.example .env
+      - name: Generate disposable audio fixture
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          mkdir -p assets/music assets/images/artwork
+          ffmpeg -hide_banner -loglevel error -f lavfi -i 'sine=frequency=440:duration=30' -c:a libmp3lame assets/music/bensound-acousticbreeze.mp3
+      - run: docker compose up --build -d
+      - run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail http://localhost:8080/api/v1/catalog >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+      - run: npm ci
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm run test:e2e
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure
+          path: web/test-results
+      - run: docker compose logs
+        if: failure()
+      - run: docker compose down
+        if: always()
+  kubernetes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - run: kubectl kustomize deploy/k8s/base > /tmp/base.yaml
+      - run: cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
+      - run: kubectl kustomize deploy/k8s/local > /tmp/local.yaml
+      - run: kubectl kustomize deploy/k8s/gitops > /tmp/gitops.yaml
+      - run: kubectl kustomize deploy/argocd > /tmp/argocd.yaml
+  security-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan repository and deployment configuration
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'

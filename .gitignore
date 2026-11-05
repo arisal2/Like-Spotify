@@ -1,2 +1,15 @@
 .vscode/*
-includes/config.php
+.env
+.env.*
+!.env.example
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+*.tsbuildinfo
+backend/server
+coverage.out
+.DS_Store
+deploy/k8s/local/secrets.env
+assets/
+media-backup/
