@@ -66,6 +66,10 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: cp .env.example .env
+      - name: Generate disposable audio fixture
+        run: |
+          mkdir -p assets/music assets/images/artwork
+          ffmpeg -hide_banner -loglevel error -f lavfi -i 'sine=frequency=440:duration=2' -c:a libmp3lame assets/music/bensound-acousticbreeze.mp3
       - run: docker compose up --build -d
       - run: |
           for attempt in $(seq 1 60); do

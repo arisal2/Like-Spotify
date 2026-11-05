@@ -4,6 +4,7 @@ namespace: like-spotify
 resources:
   - ../base
   - migration-job.yaml
+  - media-pvc.yaml
 images:
   - name: like-spotify-api:local
     newName: ghcr.io/arisal2/like-spotify/api
@@ -13,3 +14,4 @@ images:
     newTag: main
 patches:
   - path: config-patch.yaml
+  - path: media-patch.yaml

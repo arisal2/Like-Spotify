@@ -28,11 +28,17 @@ Browser -> nginx / React -> Go JSON API -> MySQL
 - `web/`: React, TypeScript, Vite, TanStack Query, Zod, Vitest, and Playwright
 - `backend/`: Go HTTP API, catalog, recommendation logic, MySQL repository, and migrations
 - `deploy/k8s/`: Kubernetes base, local overlay, migration Job, and Gateway API example
-- `assets/`: bundled demo music and artwork
+- `assets/`: optional local music and artwork, stored outside Git
 
 ## Local development with Docker
 
 Requirements: Docker Desktop with Compose.
+
+Supply licensed media separately under `assets/music` and
+`assets/images/artwork`; these files are not committed or built into images.
+The catalog lists the expected filenames in `backend/internal/catalog/songs.json`.
+Set `MEDIA_PATH` in `.env` to use another directory. Without media the catalog
+still loads, but audio and artwork requests return 404.
 
 ```bash
 cp .env.example .env
@@ -153,6 +159,21 @@ retry with backoff, and namespace creation. Resources deploy in this order:
 
 The migration is an Argo CD sync hook and is deleted after success. A failed
 migration stops the later rollout.
+
+The local GitOps deployment mounts a separate `media` PVC read-only into the
+API. Populate it with licensed media before the first rollout (the import pod
+and files remain local to your cluster):
+
+```bash
+kubectl apply -n like-spotify -f deploy/k8s/gitops/media-pvc.yaml
+kubectl apply -f deploy/k8s/media-import.yaml
+kubectl wait --for=condition=Ready pod/media-import -n like-spotify --timeout=180s
+kubectl cp assets/. like-spotify/media-import:/media
+kubectl delete pod media-import -n like-spotify
+```
+
+The claim is a separate data volume; preserve or back it up when replacing the
+cluster. For a hosted deployment, use licensed object storage instead.
 
 Before the first sync, create `app-secrets` outside Git. The existing local
 secret can be retained on Docker Desktop. For a new cluster:

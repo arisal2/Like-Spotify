@@ -45,6 +45,11 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-}
     ports:
       - '127.0.0.1:8081:8081'
+    volumes:
+      - type: bind
+        source: ${MEDIA_PATH:-./assets}
+        target: /media
+        read_only: true
     depends_on:
       migrate:
         condition: service_completed_successfully
