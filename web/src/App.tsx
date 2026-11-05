@@ -22,6 +22,7 @@ import {
   api,
   setCSRF,
   type Mix,
+  type MixAdjustment,
   type Playlist,
   type SavedMix,
   type Song,
@@ -1070,9 +1071,11 @@ function MixDialog({
   onSave: (mix: Mix) => Promise<SavedMix>;
 }) {
   const [prompt, setPrompt] = useState("");
+  const [previewPrompt, setPreviewPrompt] = useState("");
   const generate = useMutation({
     mutationFn: api.mix,
-    onSuccess: () => {
+    onSuccess: (_mix, input) => {
+      setPreviewPrompt(input.prompt);
       save.reset();
       feedback.reset();
     },
@@ -1096,7 +1099,7 @@ function MixDialog({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          generate.mutate(prompt);
+          generate.mutate({ prompt });
         }}
       >
         <label>
@@ -1154,6 +1157,37 @@ function MixDialog({
               <li key={id}>{songs.find((song) => song.id === id)?.title}</li>
             ))}
           </ol>
+          <div className="prompt-chips" aria-label="Adjust mix">
+            {(
+              [
+                ["calmer", "Calmer"],
+                ["energetic", "More energetic"],
+                ["familiar", "More familiar"],
+                ["adventurous", "More adventurous"],
+              ] as [MixAdjustment, string][]
+            ).map(([adjustment, label]) => (
+              <button
+                type="button"
+                key={adjustment}
+                disabled={
+                  generate.isPending || save.isPending || feedback.isPending
+                }
+                onClick={() =>
+                  generate.mutate({
+                    prompt: previewPrompt,
+                    adjustment,
+                    previousSongIds: mix.songIds,
+                  })
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="privacy-note">
+            Familiar and adventurous compare tracks with this preview, not your
+            listening history.
+          </p>
           <div className="mix-actions">
             <button
               className="button secondary"

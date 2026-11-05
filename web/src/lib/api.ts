@@ -42,6 +42,7 @@ export type Session = z.infer<typeof sessionSchema>;
 export type Mix = z.infer<typeof mixSchema>;
 export type History = z.infer<typeof historySchema>;
 export type SavedMix = z.infer<typeof savedMixSchema>;
+export type MixAdjustment = "calmer" | "energetic" | "familiar" | "adventurous";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -129,10 +130,14 @@ export const api = {
       body: JSON.stringify({ enabled }),
     }),
   clearHistory: () => request("/history", z.undefined(), { method: "DELETE" }),
-  mix: (prompt: string) =>
+  mix: (input: {
+    prompt: string;
+    adjustment?: MixAdjustment;
+    previousSongIds?: number[];
+  }) =>
     request("/mixes/preview", mixSchema, {
       method: "POST",
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify(input),
     }),
   saveMix: (mix: Mix) =>
     request("/mixes", savedMixSchema, {

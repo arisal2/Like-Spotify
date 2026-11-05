@@ -36,6 +36,9 @@ func TestAuthenticationBoundaries(t *testing.T) {
 		{name: "unknown catalog ID", method: "POST", path: "/api/v1/playlists", cookie: strings.Repeat("a", 64), csrf: "correct-csrf", body: `{"name":"Mix","songIds":[999]}`, status: 422},
 		{name: "unknown fields", method: "POST", path: "/api/v1/playlists", cookie: strings.Repeat("a", 64), csrf: "correct-csrf", body: `{"name":"Mix","songIds":[],"userId":99}`, status: 400},
 		{name: "multiple bodies", method: "POST", path: "/api/v1/playlists", cookie: strings.Repeat("a", 64), csrf: "correct-csrf", body: `{"name":"Mix","songIds":[]} {}`, status: 400},
+		{name: "invalid adjustment", method: "POST", path: "/api/v1/mixes/preview", cookie: strings.Repeat("a", 64), csrf: "correct-csrf", body: `{"prompt":"focus","adjustment":"unknown"}`, status: 422},
+		{name: "familiar requires previous mix", method: "POST", path: "/api/v1/mixes/preview", cookie: strings.Repeat("a", 64), csrf: "correct-csrf", body: `{"prompt":"focus","adjustment":"familiar"}`, status: 422},
+		{name: "unknown previous song", method: "POST", path: "/api/v1/mixes/preview", cookie: strings.Repeat("a", 64), csrf: "correct-csrf", body: `{"prompt":"focus","adjustment":"adventurous","previousSongIds":[99999]}`, status: 422},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))

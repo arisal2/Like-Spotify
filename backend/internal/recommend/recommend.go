@@ -27,7 +27,12 @@ type Generator interface {
 }
 type Local struct{}
 
-func (Local) Generate(_ context.Context, prompt string, songs []catalog.Song) (Mix, error) {
+func (l Local) Generate(ctx context.Context, prompt string, songs []catalog.Song) (Mix, error) {
+	return l.GenerateAdjusted(ctx, prompt, songs, "", nil)
+}
+
+// GenerateAdjusted uses only the previous preview, never listening history.
+func (Local) GenerateAdjusted(_ context.Context, prompt string, songs []catalog.Song, adjustment string, previous []int64) (Mix, error) {
 	text := strings.ToLower(prompt)
 	aliases := map[string][]string{
 		"study": {"focus", "calm"}, "work": {"focus"}, "coding": {"focus", "ambient"}, "relax": {"calm"}, "chill": {"calm"}, "sleep": {"calm", "ambient"},
@@ -50,12 +55,28 @@ func (Local) Generate(_ context.Context, prompt string, songs []catalog.Song) (M
 		score int
 	}
 	ranked := []candidate{}
+	prior := make(map[int64]bool, len(previous))
+	for _, id := range previous {
+		prior[id] = true
+	}
 	for _, song := range songs {
 		score := 0
 		for _, tag := range song.Tags {
 			if wanted[tag] {
 				score += 3
 			}
+			if adjustment == "calmer" && (tag == "calm" || tag == "ambient" || tag == "relaxing") {
+				score += 8
+			}
+			if adjustment == "energetic" && (tag == "energy" || tag == "workout" || tag == "dance" || tag == "upbeat") {
+				score += 8
+			}
+		}
+		if adjustment == "familiar" && prior[song.ID] {
+			score += 8
+		}
+		if adjustment == "adventurous" && !prior[song.ID] {
+			score += 8
 		}
 		for _, word := range words {
 			if len(word) > 2 && strings.Contains(strings.ToLower(song.Title), word) {
@@ -72,7 +93,18 @@ func (Local) Generate(_ context.Context, prompt string, songs []catalog.Song) (M
 		}
 		ids = append(ids, c.id)
 	}
-	return Mix{Name: "Your mood, on repeat", Description: "A local mix matched against the catalog’s hand-curated mood tags. Try focus, morning, jazz, or workout.", SongIDs: ids, Source: "local"}, nil
+	description := "A local mix matched against the catalog’s hand-curated mood tags."
+	switch adjustment {
+	case "calmer":
+		description = "A calmer take, favoring the catalog’s calm and ambient tags."
+	case "energetic":
+		description = "A more energetic take, favoring upbeat catalog tags."
+	case "familiar":
+		description = "A familiar take that favors tracks from your previous preview."
+	case "adventurous":
+		description = "A more adventurous take that favors tracks outside your previous preview."
+	}
+	return Mix{Name: "Your mood, on repeat", Description: description, SongIDs: ids, Source: "local"}, nil
 }
 
 type OpenAI struct {

@@ -12,6 +12,7 @@ The product direction and prioritized roadmap live in [the PRD](docs/PRD.md).
 - Like songs and create, rename, reorder, and delete playlists
 - Keep private listening history with clear and opt-out controls
 - Generate, save, and privately rate catalog-grounded mood mixes from a natural-language prompt
+- Refine mix previews by energy or by how much they change from the previous preview
 - Run locally with Docker Compose or deploy to Kubernetes
 
 The mood-mix feature works without an external service by matching hand-curated catalog tags. When OpenAI is configured, it uses the Responses API with Structured Outputs, validates every returned song ID, and falls back to the local generator if the provider is unavailable. Prompts and the demo catalog are sent to OpenAI when this mode is enabled; account and listening data are not included.

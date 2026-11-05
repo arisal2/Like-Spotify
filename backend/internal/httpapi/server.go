@@ -524,7 +524,9 @@ func (s *Server) preview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Prompt string `json:"prompt"`
+		Prompt     string  `json:"prompt"`
+		Adjustment string  `json:"adjustment"`
+		Previous   []int64 `json:"previousSongIds"`
 	}
 	if !decode(w, r, &body) {
 		return
@@ -534,10 +536,30 @@ func (s *Server) preview(w http.ResponseWriter, r *http.Request) {
 		fail(w, 422, "validation", "Describe your mood in 3–500 characters")
 		return
 	}
-	mix, err := s.generator.Generate(r.Context(), body.Prompt, s.songs)
+	switch body.Adjustment {
+	case "", "calmer", "energetic", "familiar", "adventurous":
+	default:
+		fail(w, 422, "validation", "Invalid mix adjustment")
+		return
+	}
+	if len(body.Previous) > 8 || !s.validIDs(body.Previous) || ((body.Adjustment == "familiar" || body.Adjustment == "adventurous") && len(body.Previous) == 0) {
+		fail(w, 422, "validation", "Invalid previous mix")
+		return
+	}
+	prompt := body.Prompt
+	if body.Adjustment != "" {
+		prompt += fmt.Sprintf("\nAdjustment: %s. Previous preview song IDs: %v. Familiar means favor those IDs; adventurous means favor different IDs. Use only catalog tracks.", body.Adjustment, body.Previous)
+	}
+	var mix recommend.Mix
+	var err error
+	if local, ok := s.generator.(recommend.Local); ok {
+		mix, err = local.GenerateAdjusted(r.Context(), body.Prompt, s.songs, body.Adjustment, body.Previous)
+	} else {
+		mix, err = s.generator.Generate(r.Context(), prompt, s.songs)
+	}
 	if err != nil {
 		s.logger.Warn("AI provider unavailable; using local mix", "error", err)
-		mix, _ = (recommend.Local{}).Generate(r.Context(), body.Prompt, s.songs)
+		mix, _ = (recommend.Local{}).GenerateAdjusted(r.Context(), body.Prompt, s.songs, body.Adjustment, body.Previous)
 		mix.Source = "local_fallback"
 	}
 	if err := recommend.Validate(mix, s.songs); err != nil {

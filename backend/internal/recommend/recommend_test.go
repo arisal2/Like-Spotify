@@ -27,6 +27,33 @@ func TestLocalMoodsStayGrounded(t *testing.T) {
 		t.Fatal("different moods should change ranking")
 	}
 }
+func TestLocalAdjustments(t *testing.T) {
+	songs := []catalog.Song{
+		{ID: 1, Tags: []string{"calm"}},
+		{ID: 2, Tags: []string{"energy"}},
+		{ID: 3, Tags: []string{"jazz"}},
+	}
+	for _, tc := range []struct {
+		adjustment string
+		previous   []int64
+		first      int64
+	}{
+		{"calmer", nil, 1},
+		{"energetic", nil, 2},
+		{"familiar", []int64{3}, 3},
+		{"adventurous", []int64{1, 2}, 3},
+	} {
+		t.Run(tc.adjustment, func(t *testing.T) {
+			mix, err := (Local{}).GenerateAdjusted(context.Background(), "music", songs, tc.adjustment, tc.previous)
+			if err != nil || len(mix.SongIDs) != len(songs) || mix.SongIDs[0] != tc.first {
+				t.Fatalf("unexpected adjusted mix: %+v, %v", mix, err)
+			}
+			if err := Validate(mix, songs); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
 func TestProviderRejectsUngroundedAndIncompleteResponses(t *testing.T) {
 	for _, tc := range []struct {
 		name, status, text string
