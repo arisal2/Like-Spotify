@@ -9,3 +9,4 @@ FROM nginxinc/nginx-unprivileged:1.28-alpine
 COPY web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /src/dist /usr/share/nginx/html
 EXPOSE 8080
+USER 101:101

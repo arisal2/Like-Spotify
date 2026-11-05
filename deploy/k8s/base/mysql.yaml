@@ -42,6 +42,7 @@ spec:
         - name: mysql
           image: mysql:8.4
           securityContext:
+            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ['ALL']
