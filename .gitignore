@@ -12,3 +12,4 @@ coverage.out
 .DS_Store
 deploy/k8s/local/secrets.env
 assets/
+media-backup/

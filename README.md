@@ -173,7 +173,10 @@ kubectl delete pod media-import -n like-spotify
 ```
 
 The claim is a separate data volume; preserve or back it up when replacing the
-cluster. For a hosted deployment, use licensed object storage instead.
+cluster. A local `media-backup/` copy can be kept in the project directory; it
+is ignored by Git and excluded from Docker builds. A second copy on a different
+device protects against loss of this computer. For a hosted deployment, use
+licensed object storage instead.
 
 Before the first sync, create `app-secrets` outside Git. The existing local
 secret can be retained on Docker Desktop. For a new cluster:
@@ -269,4 +272,4 @@ The in-memory rate limiter is intended for this project-sized deployment. A larg
 
 ## Catalog and licensing
 
-The bundled demo tracks are identified in the original project as Bensound music. Review the applicable music and artwork licenses before making a public or commercial deployment.
+The original project's demo tracks are identified as Bensound music. Review the applicable music and artwork licenses before making a public or commercial deployment.
