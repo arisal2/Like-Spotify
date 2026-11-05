@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: like-spotify
+  annotations:
+    argocd.argoproj.io/sync-wave: '-4'
+  labels:
+    app.kubernetes.io/part-of: like-spotify
