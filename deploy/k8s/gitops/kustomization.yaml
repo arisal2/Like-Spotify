@@ -9,10 +9,10 @@ resources:
 images:
   - name: like-spotify-api:local
     newName: ghcr.io/arisal2/like-spotify/api
-    newTag: e45791a43791f47e5d297319be5354ead6e65630
+    newTag: fdea45cfee28c674a7763ce5e2513435b4647825
   - name: like-spotify-web:local
     newName: ghcr.io/arisal2/like-spotify/web
-    newTag: e45791a43791f47e5d297319be5354ead6e65630
+    newTag: fdea45cfee28c674a7763ce5e2513435b4647825
 patches:
   - path: config-patch.yaml
   - target:
