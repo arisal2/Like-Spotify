@@ -7,7 +7,108 @@ on:
 permissions:
   contents: read
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.paths.outputs.backend }}
+      frontend: ${{ steps.paths.outputs.frontend }}
+      browser: ${{ steps.paths.outputs.browser }}
+      kubernetes: ${{ steps.paths.outputs.kubernetes }}
+      security: ${{ steps.paths.outputs.security }}
+      documentation: ${{ steps.paths.outputs.documentation }}
+      container-images: ${{ steps.paths.outputs.container-images }}
+      container-matrix: ${{ steps.paths.outputs.container-matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: paths
+        name: Select checks from changed paths
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          backend=false
+          frontend=false
+          browser=false
+          kubernetes=false
+          security=false
+          documentation=false
+          container_api=false
+          container_web=false
+
+          if [ "$EVENT_NAME" = 'workflow_call' ]; then
+            backend=true
+            frontend=true
+            browser=true
+            kubernetes=true
+            security=true
+            documentation=true
+            container_api=true
+            container_web=true
+          else
+            if [ "$EVENT_NAME" = 'pull_request' ]; then
+              base="$PR_BASE_SHA"
+              head="$PR_HEAD_SHA"
+            else
+              base="$BEFORE_SHA"
+              head="$CURRENT_SHA"
+              if [ -z "$base" ] || [ "$base" = '0000000000000000000000000000000000000000' ]; then
+                base="${head}^"
+              fi
+            fi
+
+            while IFS= read -r path; do
+              case "$path" in
+                backend/*)
+                  backend=true; browser=true; security=true; container_api=true ;;
+                web/*)
+                  frontend=true; browser=true; security=true; container_web=true ;;
+                deploy/*)
+                  kubernetes=true; security=true ;;
+                .github/workflows/*)
+                  backend=true; frontend=true; browser=true; kubernetes=true; security=true; container_api=true; container_web=true ;;
+                .dockerignore)
+                  backend=true; frontend=true; browser=true; security=true; container_api=true; container_web=true ;;
+                .github/dependabot.yml|compose.yaml|.env.example)
+                  backend=true; frontend=true; browser=true; security=true ;;
+                *.md|docs/*)
+                  documentation=true ;;
+                *)
+                  security=true ;;
+              esac
+            done < <(git diff --name-only "$base" "$head")
+          fi
+
+          container_images=false
+          container_include='[]'
+          if [ "$container_api" = true ]; then
+            container_images=true
+            container_include=$(jq -c '. + [{"component":"api","dockerfile":"backend/Dockerfile"}]' <<< "$container_include")
+          fi
+          if [ "$container_web" = true ]; then
+            container_images=true
+            container_include=$(jq -c '. + [{"component":"web","dockerfile":"web/Dockerfile"}]' <<< "$container_include")
+          fi
+
+          {
+            echo "backend=$backend"
+            echo "frontend=$frontend"
+            echo "browser=$browser"
+            echo "kubernetes=$kubernetes"
+            echo "security=$security"
+            echo "documentation=$documentation"
+            echo "container-images=$container_images"
+            echo "container-matrix={\"include\":$container_include}"
+          } >> "$GITHUB_OUTPUT"
+
   backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -40,6 +141,8 @@ jobs:
           go-package: ./...
           work-dir: backend
   frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -58,53 +161,110 @@ jobs:
       - run: npm test
       - run: npm run build
   browser:
+    needs: changes
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: like_spotify
+          MYSQL_ROOT_PASSWORD: ci-test-password
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pci-test-password"
+          --health-interval=5s --health-timeout=3s --health-retries=30
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@v7
         with:
           node-version: '26'
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm install --global npm@12.2.2
-      - run: cp .env.example .env
+      - run: npm ci
+        working-directory: web
       - name: Generate disposable audio fixture
         run: |
           mkdir -p assets/music assets/images/artwork
           node web/e2e/generate-audio.mjs assets/music/ci-tone.wav
-      - name: Build each application image once
-        run: docker compose build api web
-      - run: docker compose up --no-build -d
-      - run: |
+      - name: Build and migrate API
+        working-directory: backend
+        env:
+          DATABASE_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/like_spotify?parseTime=true'
+        run: |
+          go build -o /tmp/like-spotify-api ./cmd/server
+          /tmp/like-spotify-api migrate
+      - name: Start API and Vite
+        env:
+          DATABASE_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/like_spotify?parseTime=true'
+          APP_ORIGIN: 'http://127.0.0.1:5173'
+          MEDIA_DIR: ${{ github.workspace }}/assets
+        run: |
+          /tmp/like-spotify-api >/tmp/like-api.log 2>&1 &
+          echo $! >/tmp/like-api.pid
+          (cd web && npm run dev >/tmp/like-web.log 2>&1 & echo $! >/tmp/like-web.pid)
+      - name: Wait for application
+        run: |
           for attempt in $(seq 1 60); do
-            if curl --fail http://localhost:8080/api/v1/catalog >/dev/null; then exit 0; fi
-            sleep 2
+            if curl --fail http://127.0.0.1:5173/api/v1/catalog >/dev/null; then exit 0; fi
+            sleep 1
           done
-          docker compose logs
+          cat /tmp/like-api.log /tmp/like-web.log
           exit 1
-      - run: npm ci
-        working-directory: web
       - name: Cache Playwright browser
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('web/package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
         working-directory: web
       - run: npm run test:e2e
         working-directory: web
         env:
           E2E_AUDIO_FIXTURE: '1'
+          E2E_BASE_URL: 'http://127.0.0.1:5173'
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: browser-failure
           path: web/test-results
-      - run: docker compose logs
+      - name: Show service logs
         if: failure()
-      - run: docker compose down
+        run: cat /tmp/like-api.log /tmp/like-web.log
+      - name: Stop test services
         if: always()
+        run: |
+          if [ -f /tmp/like-api.pid ]; then kill "$(cat /tmp/like-api.pid)" || true; fi
+          if [ -f /tmp/like-web.pid ]; then kill "$(cat /tmp/like-web.pid)" || true; fi
+
+  containers:
+    needs: changes
+    if: needs.changes.outputs.container-images == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.changes.outputs.container-matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          tags: like-spotify-${{ matrix.component }}:ci
+          cache-from: type=gha,scope=ci-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=ci-${{ matrix.component }}
+
   kubernetes:
+    needs: changes
+    if: needs.changes.outputs.kubernetes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -115,6 +275,8 @@ jobs:
       - run: kubectl kustomize deploy/k8s/gitops > /tmp/gitops.yaml
       - run: kubectl kustomize deploy/argocd > /tmp/argocd.yaml
   security-config:
+    needs: changes
+    if: needs.changes.outputs.security == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -127,3 +289,44 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
+
+  documentation:
+    needs: changes
+    if: needs.changes.outputs.documentation == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm install --global npm@12.2.2
+      - run: npm ci
+        working-directory: web
+      - name: Check Markdown formatting
+        run: web/node_modules/.bin/prettier --check README.md SECURITY.md docs/*.md
+
+  ci-gate:
+    if: always()
+    needs: [changes, backend, frontend, browser, containers, kubernetes, security-config, documentation]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every selected check to pass
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          BROWSER: ${{ needs.browser.result }}
+          CONTAINERS: ${{ needs.containers.result }}
+          KUBERNETES: ${{ needs.kubernetes.result }}
+          SECURITY: ${{ needs.security-config.result }}
+          DOCUMENTATION: ${{ needs.documentation.result }}
+        run: |
+          [ "$CHANGES" = 'success' ]
+          for result in "$BACKEND" "$FRONTEND" "$BROWSER" "$CONTAINERS" "$KUBERNETES" "$SECURITY" "$DOCUMENTATION"; do
+            if [ "$result" != 'success' ] && [ "$result" != 'skipped' ]; then
+              echo "A selected CI job did not pass: $result"
+              exit 1
+            fi
+          done

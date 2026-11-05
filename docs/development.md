@@ -102,8 +102,9 @@ npm run test:e2e
 
 The CI workflow generates a deterministic 30-second PCM WAV using
 `web/e2e/generate-audio.mjs`, points only the test browser catalog at that file,
-and verifies that real media metadata loads. No copyrighted fixture is stored
-in Git.
+and verifies that real media metadata loads. CI runs the browser against native
+Go and Vite with a MySQL service; production container builds run in a separate
+path-aware job. No copyrighted fixture is stored in Git.
 
 ### Kubernetes manifests
 
