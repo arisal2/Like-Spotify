@@ -5,6 +5,7 @@ resources:
   - ../base
   - migration-job.yaml
   - media-pvc.yaml
+  - ../local-access
 images:
   - name: like-spotify-api:local
     newName: ghcr.io/arisal2/like-spotify/api

@@ -204,6 +204,12 @@ kubectl apply -k deploy/argocd
 kubectl get applications -n argocd
 ```
 
+On Docker Desktop, the local Argo UI is exposed at <https://localhost:8082>
+and the application at <http://localhost:8080> by separate LoadBalancer
+Services. Keep Docker Desktop and Kubernetes running; no port-forward command
+is needed. These ports may also be reachable from your network depending on
+Docker Desktop's networking settings. The API and database remain internal.
+
 The included Application targets `deploy/local`, the in-cluster Kubernetes API,
 and the `like-spotify` namespace. Until the first successful post-merge
 promotion creates that branch, Argo CD will report the source as unavailable.
@@ -229,8 +235,11 @@ Load or publish the `like-spotify-api:local` and `like-spotify-web:local` images
 kubectl apply -f deploy/k8s/migration-job.yaml
 kubectl wait --for=condition=complete job/migrate-v1 -n like-spotify --timeout=180s
 kubectl apply -k deploy/k8s/local
-kubectl port-forward -n like-spotify service/web 8080:8080
 ```
+
+Open <http://localhost:8080> on Docker Desktop. Other Kubernetes environments
+need a LoadBalancer implementation or can use `kubectl port-forward -n
+like-spotify service/web 8080:8080` instead.
 
 For production:
 

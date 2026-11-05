@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: like-spotify
 resources:
   - ../base
+  - ../local-access
 secretGenerator:
   - name: app-secrets
     envs:
