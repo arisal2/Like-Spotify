@@ -6,7 +6,7 @@ The product direction and prioritized roadmap live in [the PRD](docs/PRD.md).
 
 ## What it does
 
-- Browse and search the bundled instrumental catalog
+- Browse and search the demo instrumental catalog
 - Play music with a persistent queue, seek, volume, shuffle, and repeat controls
 - Create an account with secure password hashing and database-backed sessions
 - Like songs and create, rename, reorder, and delete playlists
@@ -21,7 +21,7 @@ The mood-mix feature works without an external service by matching hand-curated 
 
 ```text
 Browser -> nginx / React -> Go JSON API -> MySQL
-                         -> bundled audio and artwork
+                         -> separately supplied audio and artwork
                          -> OpenAI (optional mood mixes)
 ```
 

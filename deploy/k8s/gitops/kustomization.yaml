@@ -14,4 +14,22 @@ images:
     newTag: main
 patches:
   - path: config-patch.yaml
-  - path: media-patch.yaml
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: api
+    patch: |-
+      - op: add
+        path: /spec/template/spec/volumes
+        value:
+          - name: media
+            persistentVolumeClaim:
+              claimName: media
+              readOnly: true
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts
+        value:
+          - name: media
+            mountPath: /media
+            readOnly: true
