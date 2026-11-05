@@ -2,7 +2,44 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Song } from "../lib/api";
 import { shuffled } from "../lib/queue";
 
-export function usePlayer() {
+const storagePrefix = "like.playback.v1.";
+
+type StoredPlayback = {
+  queueIDs: number[];
+  originalIDs: number[];
+  trackID: number;
+  progress: number;
+  volume: number;
+  shuffle: boolean;
+  repeat: boolean;
+};
+
+function readStored(owner: string): StoredPlayback | null {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(storagePrefix + owner) ?? "null");
+    if (!value || typeof value !== "object") return null;
+    const state = value as Partial<StoredPlayback>;
+    if (
+      !Array.isArray(state.queueIDs) ||
+      !state.queueIDs.every(Number.isSafeInteger) ||
+      !Array.isArray(state.originalIDs) ||
+      !state.originalIDs.every(Number.isSafeInteger) ||
+      !Number.isSafeInteger(state.trackID) ||
+      typeof state.progress !== "number" ||
+      !Number.isFinite(state.progress) ||
+      typeof state.volume !== "number" ||
+      !Number.isFinite(state.volume) ||
+      typeof state.shuffle !== "boolean" ||
+      typeof state.repeat !== "boolean"
+    )
+      return null;
+    return state as StoredPlayback;
+  } catch {
+    return null;
+  }
+}
+
+export function usePlayer(catalog: Song[] = [], owner: string | null = "guest") {
   const audio = useRef<HTMLAudioElement | null>(null);
   const [queue, setQueue] = useState<Song[]>([]);
   const original = useRef<Song[]>([]);
@@ -14,6 +51,12 @@ export function usePlayer() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [error, setError] = useState("");
+  const activeOwner = useRef<string | null>(null);
+  const hydrated = useRef(false);
+  const pendingSeek = useRef(0);
+  const autoPlayNextTrack = useRef(false);
+  const lastStoredSecond = useRef(-1);
+  const lastStoredSettings = useRef("");
   const track = queue[index];
   const playAudio = useCallback(() => {
     const element = audio.current;
@@ -31,8 +74,15 @@ export function usePlayer() {
     element.volume = 0.7;
     audio.current = element;
     const time = () => setProgress(element.currentTime);
-    const loaded = () =>
-      setDuration(Number.isFinite(element.duration) ? element.duration : 0);
+    const loaded = () => {
+      const mediaDuration = Number.isFinite(element.duration) ? element.duration : 0;
+      setDuration(mediaDuration);
+      if (pendingSeek.current > 0 && mediaDuration > 0) {
+        element.currentTime = Math.min(pendingSeek.current, Math.max(0, mediaDuration - 1));
+        setProgress(element.currentTime);
+        pendingSeek.current = 0;
+      }
+    };
     const play = () => setPlaying(true);
     const pause = () => setPlaying(false);
     const failed = () => {
@@ -55,15 +105,85 @@ export function usePlayer() {
     if (!track || !audio.current) return;
     audio.current.src = track.audio;
     audio.current.load();
-    playAudio();
+    if (autoPlayNextTrack.current) playAudio();
+    autoPlayNextTrack.current = false;
   }, [track, playAudio]);
+  useEffect(() => {
+    if (!owner || !catalog.length || activeOwner.current === owner) return;
+    audio.current?.pause();
+    const saved = readStored(owner);
+    const byID = new Map(catalog.map((song) => [song.id, song]));
+    const restoredQueue = saved?.queueIDs.flatMap((id) => byID.get(id) ?? []) ?? [];
+    const restoredOriginal = saved?.originalIDs.flatMap((id) => byID.get(id) ?? []) ?? [];
+    const restoredIndex = saved
+      ? restoredQueue.findIndex((song) => song.id === saved.trackID)
+      : -1;
+    activeOwner.current = owner;
+    hydrated.current = true;
+    autoPlayNextTrack.current = false;
+    lastStoredSecond.current = -1;
+    lastStoredSettings.current = "";
+    setQueue(restoredQueue);
+    original.current = restoredOriginal.length ? restoredOriginal : restoredQueue;
+    setIndex(restoredIndex >= 0 ? restoredIndex : 0);
+    setPlaying(false);
+    setShuffle(saved?.shuffle ?? false);
+    setRepeat(saved?.repeat ?? false);
+    setProgress(Math.max(0, saved?.progress ?? 0));
+    pendingSeek.current = Math.max(0, saved?.progress ?? 0);
+    const restoredVolume = Math.min(1, Math.max(0, saved?.volume ?? 0.7));
+    setVolume(restoredVolume);
+    if (audio.current) audio.current.volume = restoredVolume;
+    setError("");
+  }, [catalog, owner]);
+  useEffect(() => {
+    if (!owner || activeOwner.current !== owner || !hydrated.current) return;
+    const second = Math.floor(progress);
+    const settings = JSON.stringify({
+      queueIDs: queue.map((song) => song.id),
+      originalIDs: original.current.map((song) => song.id),
+      trackID: track?.id,
+      volume,
+      shuffle,
+      repeat,
+    });
+    if (
+      second === lastStoredSecond.current &&
+      settings === lastStoredSettings.current &&
+      queue.length
+    )
+      return;
+    lastStoredSecond.current = second;
+    lastStoredSettings.current = settings;
+    if (!queue.length) {
+      localStorage.removeItem(storagePrefix + owner);
+      return;
+    }
+    const value: StoredPlayback = {
+      queueIDs: queue.map((song) => song.id),
+      originalIDs: original.current.map((song) => song.id),
+      trackID: track?.id ?? queue[0].id,
+      progress: Math.max(0, progress),
+      volume,
+      shuffle,
+      repeat,
+    };
+    try {
+      localStorage.setItem(storagePrefix + owner, JSON.stringify(value));
+    } catch {
+      // Playback remains functional when storage is disabled or full.
+    }
+  }, [owner, progress, queue, repeat, shuffle, track, volume]);
   const next = useCallback(() => {
     if (!queue.length) return;
     if (index === queue.length - 1) {
       audio.current?.pause();
       if (audio.current) audio.current.currentTime = 0;
       setPlaying(false);
-    } else setIndex((value) => value + 1);
+    } else {
+      autoPlayNextTrack.current = true;
+      setIndex((value) => value + 1);
+    }
   }, [index, queue.length]);
   useEffect(() => {
     const element = audio.current;
@@ -83,6 +203,7 @@ export function usePlayer() {
     setProgress(0);
     setDuration(0);
     original.current = [...songs];
+    autoPlayNextTrack.current = true;
     const ordered = shuffle
       ? [songs[selected], ...shuffled(songs.filter((_, i) => i !== selected))]
       : [...songs];
@@ -116,7 +237,10 @@ export function usePlayer() {
     if (audio.current.currentTime > 3 || index === 0) {
       audio.current.currentTime = 0;
       playAudio();
-    } else setIndex((value) => value - 1);
+    } else {
+      autoPlayNextTrack.current = true;
+      setIndex((value) => value - 1);
+    }
   };
   const seek = (value: number) => {
     if (audio.current && duration > 0) {

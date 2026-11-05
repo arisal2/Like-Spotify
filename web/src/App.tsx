@@ -28,7 +28,6 @@ export function App() {
   const client = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
-  const player = usePlayer();
   const [dialog, setDialog] = useState<"auth" | "playlist" | "mix" | null>(
     null,
   );
@@ -52,6 +51,12 @@ export function App() {
     enabled: !!user,
   });
   const songs = catalog.data?.songs ?? [];
+  const playbackOwner = session.isPending
+    ? null
+    : user
+      ? `user.${user.id}`
+      : "guest";
+  const player = usePlayer(songs, playbackOwner);
   const collections = playlists.data?.playlists ?? [];
   const liked = likes.data?.songIds ?? [];
   const albumID = location.pathname.startsWith("/albums/")
