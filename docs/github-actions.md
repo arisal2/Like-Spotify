@@ -45,8 +45,11 @@ were intentionally skipped. Make `ci-gate` the required branch-protection
 check instead of requiring every component job individually. Reusable workflow
 calls, including tagged releases, deliberately run the full suite.
 
-Browser tests generate a temporary WAV tone with Node, build each application
-image once, and cache the Chromium download.
+Browser tests generate a temporary WAV tone with Node and exercise native Go,
+Vite, and a MySQL service. Production container builds run separately, in
+parallel, and only for changed API or web build contexts. This keeps the real
+browser/API/database/media flow while removing image builds and Compose startup
+from the browser job's critical path.
 
 After a successful **push** run on `master`, `Build and promote` examines the
 merged commit. It publishes only changed API or web images for AMD64 and ARM64.
