@@ -1,65 +1,79 @@
 # Like
 
-An independent music-listening project built with Go, React, and Kubernetes.
-Browse a small catalog, keep playlists and favorites, and turn a mood into a
-playable mix.
+Like is a self-hosted music application built with Go, React, TypeScript, MySQL,
+Docker, and Kubernetes. It provides browser playback, accounts, likes,
+playlists, listening-history controls, and mood-based mixes without committing
+copyrighted media or secrets to Git.
 
-## What you can do
+## Highlights
 
-- Play, seek, shuffle, repeat, and resume a queue on the same device.
-- Create an account, like tracks, and organize playlists.
-- Review or clear your private listening history, or turn it off entirely.
-- Generate, adjust, save, and rate a mood mix. Local recommendations work
-  without an AI provider.
+- Browser player with seek, queue, shuffle, repeat, volume, and session restore.
+- Account-scoped likes, playlists, saved mixes, and listening history.
+- Local tag-based recommendations with optional AI-assisted mix generation.
+- Go API with cookie sessions, CSRF protection, rate limits, strict JSON input,
+  health probes, and structured logs.
+- Non-root, read-only containers and restricted Kubernetes workloads.
+- Pull-request CI, multi-architecture images, GitOps promotion, and Argo CD
+  reconciliation to a local Docker Desktop cluster.
 
-## Get started
+## Stack
 
-You need Docker Desktop with Compose. Music and artwork are stored separately
-from Git and container images. Place licensed files in `assets/music/` and
-`assets/images/artwork/`, using the filenames listed in
-[`songs.json`](backend/internal/catalog/songs.json). Without them, the catalog
-loads but media playback and artwork are unavailable.
+| Area     | Technology                                              |
+| -------- | ------------------------------------------------------- |
+| Web      | React 19, TypeScript 7, Vite 8, nginx-unprivileged      |
+| API      | Go 1.27, `net/http`, MySQL driver                       |
+| Data     | MySQL 8.4 and filesystem/PVC media storage              |
+| Quality  | Biome, Vitest, Playwright, Go tests, govulncheck, Trivy |
+| Delivery | Docker, GitHub Actions, GHCR, Kustomize, Argo CD        |
+
+## Quick start with Docker
+
+Requirements: Docker Desktop with Compose and licensed media files.
 
 ```bash
 cp .env.example .env
-# Set your own database passwords in .env.
+# Replace both example database passwords in .env.
 docker compose up --build
 ```
 
-Open <http://localhost:8080>. Compose keeps database data in a named volume;
-`docker compose down` stops the services without deleting it. Set `MEDIA_PATH`
-in `.env` to mount media from a different local directory.
+Open <http://localhost:8080>. Check the API at
+<http://localhost:8080/api/v1/catalog>.
 
-## How it fits together
+Media is intentionally not stored in Git. Put files under `assets/music/` and
+`assets/images/artwork/` using the names in
+[`songs.json`](backend/internal/catalog/songs.json), or set `MEDIA_PATH` in
+`.env` to another directory. The catalog still loads when files are absent,
+but audio and artwork requests return 404.
 
-```text
-Browser → React / nginx → Go API → MySQL
-                               ↘ media storage
-                               ↘ optional AI provider
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs -f api web
+docker compose down           # keeps the MySQL volume
+docker compose down --volumes # deletes local database data
 ```
 
-The Go API owns sessions, playlists, listening history, and mix generation.
-React handles browsing and playback. Local mood matching uses catalog tags;
-when configured, the AI provider receives the prompt and catalog metadata,
-and the API validates its result against the catalog. Account details and
-listening history are not included in the provider request.
+## Architecture
 
-## Kubernetes and delivery
+```text
+Browser
+   │
+   ▼
+React SPA served by nginx ── /api and /media ──▶ Go API
+                                             │
+                                      ┌─────────────┼─────────────┐
+                                      ▼             ▼             ▼
+                                   MySQL       media storage   optional AI
+```
 
-The local cluster uses GitOps: after a change to `master` passes CI, GitHub
-Actions publishes the API and web images and promotes their tested revision to
-`deploy/local`. Argo CD watches that branch, runs the migration hook, and syncs
-the workloads into the `like-spotify` namespace.
+The browser talks to one origin. nginx serves the SPA and proxies API and media
+requests to Go. The API owns authentication, authorization, persistence,
+recommendations, and the narrow media-file allowlist. See
+[Architecture](docs/architecture.md) for request, data, AI, and deployment
+flows.
 
-- [Set up Argo CD and the local cluster](docs/argo-cd.md)
-- [Set up and troubleshoot GitHub Actions](docs/github-actions.md)
-
-On Docker Desktop, the app is at <http://localhost:8080> and Argo CD is at
-<https://localhost:8082>. Docker Desktop and Kubernetes must be running. The
-local services may be reachable from your network depending on Docker Desktop's
-network settings.
-
-## Development checks
+## Development
 
 ```bash
 cd backend
@@ -73,16 +87,64 @@ npm test
 npm run build
 ```
 
-For browser tests, start the Compose stack with media available, then run
-`npx playwright install chromium` and `npm run test:e2e` from `web/`.
+The full browser test runs against the Compose stack with Playwright. CI creates
+its own deterministic WAV fixture; no third-party song is required. See the
+[development guide](docs/development.md) for native services, test commands,
+project layout, and contribution workflow.
 
-## Security and media
+## Kubernetes and GitOps
 
-Passwords are hashed; session cookies, CSRF checks, and server-side ownership
-checks protect account operations. Secrets and local media are excluded from
-Git. Kubernetes workloads use non-root containers and network policies. See
-[SECURITY.md](SECURITY.md) for reporting and deployment guidance.
+The delivery path is intentionally pull-request driven:
 
-The `media-backup/` directory is ignored by Git and Docker. It is still on the
-same machine, so keep another backup elsewhere. Ensure you have the rights and
-attribution required for every audio track and image you supply.
+```text
+feature branch → pull request checks → merge to master → master checks
+→ multi-architecture images in GHCR → deploy/local update → Argo CD sync
+```
+
+On the configured Docker Desktop cluster:
+
+- Application: <http://localhost:8080>
+- Argo CD: <https://localhost:8082>
+
+Start with [Argo CD and local Kubernetes](docs/argo-cd.md), then use the
+[GitHub Actions and GitOps guide](docs/github-actions.md) to configure branch
+protection and delivery.
+
+## Documentation
+
+- [Documentation index](docs/README.md)
+- [Architecture and design](docs/architecture.md)
+- [Development and testing](docs/development.md)
+- [HTTP API reference](docs/api.md)
+- [Operations, backup, recovery, and rollback](docs/operations.md)
+- [Argo CD on Docker Desktop](docs/argo-cd.md)
+- [GitHub Actions and GitOps](docs/github-actions.md)
+- [Security policy](SECURITY.md)
+
+## Current scope and sensible next changes
+
+The project is a strong local/self-hosted foundation, not yet a production
+streaming service. High-value next changes are:
+
+1. Add S3-compatible object storage and signed media URLs instead of serving
+   files from the API process.
+2. Add OpenTelemetry traces, Prometheus metrics, dashboards, and alerting.
+3. Add database and media backup automation with tested restore drills.
+4. Add catalog administration, uploads, metadata extraction, and background
+   transcoding jobs.
+5. Add pagination, database indexes, and load tests before growing the catalog.
+6. Add email verification, password reset, session management, and optional
+   external identity providers.
+7. Add a production ingress with TLS, DNS automation, and external secret
+   management before exposing it publicly.
+
+## Media and licensing
+
+Only use audio and artwork you are permitted to store and serve. `assets/` and
+`media-backup/` are ignored by Git, but a local backup is not protection against
+disk loss. Keep an encrypted backup on separate storage and test restoration.
+
+## License
+
+No open-source license has been declared yet. Until one is added, copyright
+defaults apply; do not assume permission to redistribute the source or media.
