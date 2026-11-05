@@ -74,6 +74,8 @@ func New(repo store.Repository, cfg Config, generator recommend.Generator, logge
 	mux.Handle("PUT /api/v1/history/settings", s.require(http.HandlerFunc(s.historySettings)))
 	mux.Handle("DELETE /api/v1/history", s.require(http.HandlerFunc(s.clearHistory)))
 	mux.Handle("POST /api/v1/mixes/preview", s.require(http.HandlerFunc(s.preview)))
+	mux.Handle("POST /api/v1/mixes", s.require(http.HandlerFunc(s.saveMix)))
+	mux.Handle("PUT /api/v1/mixes/{id}/feedback", s.require(http.HandlerFunc(s.mixFeedback)))
 	// Expose only music and artwork; the legacy PHP tree is never served.
 	if cfg.MediaDir != "" {
 		for _, entry := range []struct{ prefix, dir string }{{"music/", "music"}, {"artwork/", "images/artwork"}} {
@@ -463,6 +465,52 @@ func (s *Server) historySettings(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) clearHistory(w http.ResponseWriter, r *http.Request) {
 	if err := s.repo.ClearHistory(r.Context(), current(r).User.ID); err != nil {
+		s.internal(w, err)
+		return
+	}
+	w.WriteHeader(204)
+}
+func (s *Server) saveMix(w http.ResponseWriter, r *http.Request) {
+	var body recommend.Mix
+	if !decode(w, r, &body) {
+		return
+	}
+	body.Name = strings.TrimSpace(body.Name)
+	body.Description = strings.TrimSpace(body.Description)
+	if body.Source != "ai" && body.Source != "local" && body.Source != "local_fallback" {
+		fail(w, 422, "validation", "Invalid mix source")
+		return
+	}
+	if err := recommend.Validate(body, s.songs); err != nil {
+		fail(w, 422, "validation", "Invalid mix")
+		return
+	}
+	saved, err := s.repo.SaveMix(r.Context(), current(r).User.ID, body.Name, body.Description, body.Source, body.SongIDs)
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
+	write(w, 201, saved)
+}
+func (s *Server) mixFeedback(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Rating string `json:"rating"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	if body.Rating != "fits" && body.Rating != "not_quite" {
+		fail(w, 422, "validation", "Rating must be fits or not_quite")
+		return
+	}
+	if err := s.repo.SetMixFeedback(r.Context(), current(r).User.ID, id, body.Rating); errors.Is(err, store.ErrNotFound) {
+		fail(w, 404, "not_found", "Saved mix not found")
+		return
+	} else if err != nil {
 		s.internal(w, err)
 		return
 	}

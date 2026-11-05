@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -37,6 +38,10 @@ type HistoryItem struct {
 	SongID   int64     `json:"songId"`
 	PlayedAt time.Time `json:"playedAt"`
 }
+type SavedMix struct {
+	ID         int64 `json:"id"`
+	PlaylistID int64 `json:"playlistId"`
+}
 
 type Repository interface {
 	Ping(context.Context) error
@@ -54,6 +59,8 @@ type Repository interface {
 	RecordHistory(context.Context, int64, int64) error
 	SetHistoryEnabled(context.Context, int64, bool) error
 	ClearHistory(context.Context, int64) error
+	SaveMix(context.Context, int64, string, string, string, []int64) (SavedMix, error)
+	SetMixFeedback(context.Context, int64, int64, string) error
 }
 
 type MySQL struct{ DB *sql.DB }
@@ -279,4 +286,56 @@ func (s *MySQL) SetHistoryEnabled(ctx context.Context, uid int64, enabled bool) 
 func (s *MySQL) ClearHistory(ctx context.Context, uid int64) error {
 	_, err := s.DB.ExecContext(ctx, "DELETE FROM listening_history WHERE user_id=?", uid)
 	return err
+}
+
+func (s *MySQL) SaveMix(ctx context.Context, uid int64, name, description, source string, ids []int64) (SavedMix, error) {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return SavedMix{}, err
+	}
+	defer tx.Rollback()
+	playlistResult, err := tx.ExecContext(ctx, "INSERT INTO playlists (user_id,name) VALUES (?,?)", uid, name)
+	if err != nil {
+		return SavedMix{}, err
+	}
+	playlistID, err := playlistResult.LastInsertId()
+	if err != nil {
+		return SavedMix{}, err
+	}
+	for position, songID := range ids {
+		if _, err := tx.ExecContext(ctx, "INSERT INTO playlist_songs (playlist_id,song_id,position) VALUES (?,?,?)", playlistID, songID, position); err != nil {
+			return SavedMix{}, err
+		}
+	}
+	snapshot, err := json.Marshal(ids)
+	if err != nil {
+		return SavedMix{}, err
+	}
+	mixResult, err := tx.ExecContext(ctx, "INSERT INTO saved_mixes (user_id,playlist_id,name,description,source,song_ids) VALUES (?,?,?,?,?,?)", uid, playlistID, name, description, source, snapshot)
+	if err != nil {
+		return SavedMix{}, err
+	}
+	mixID, err := mixResult.LastInsertId()
+	if err != nil {
+		return SavedMix{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return SavedMix{}, err
+	}
+	return SavedMix{ID: mixID, PlaylistID: playlistID}, nil
+}
+
+func (s *MySQL) SetMixFeedback(ctx context.Context, uid, id int64, rating string) error {
+	result, err := s.DB.ExecContext(ctx, "UPDATE saved_mixes SET rating=?,rated_at=UTC_TIMESTAMP() WHERE id=? AND user_id=?", rating, id, uid)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

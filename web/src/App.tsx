@@ -18,7 +18,14 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { api, setCSRF, type Mix, type Playlist, type Song } from "./lib/api";
+import {
+  api,
+  setCSRF,
+  type Mix,
+  type Playlist,
+  type SavedMix,
+  type Song,
+} from "./lib/api";
 import { formatTime } from "./lib/queue";
 import { usePlayer } from "./hooks/usePlayer";
 import { Player } from "./components/Player";
@@ -755,9 +762,9 @@ export function App() {
           songs={songs}
           onPlay={(ids) => player.play(byID(ids))}
           onSave={async (mix) => {
-            const saved = await savePlaylist(mix);
-            setDialog(null);
-            navigate(`/playlists/${saved.id}`);
+            const saved = await api.saveMix(mix);
+            await invalidateLibrary();
+            return saved;
           }}
         />
       )}
@@ -1060,11 +1067,26 @@ function MixDialog({
   onClose: () => void;
   songs: Song[];
   onPlay: (ids: number[]) => void;
-  onSave: (mix: Mix) => Promise<void>;
+  onSave: (mix: Mix) => Promise<SavedMix>;
 }) {
   const [prompt, setPrompt] = useState("");
-  const generate = useMutation({ mutationFn: api.mix });
+  const generate = useMutation({
+    mutationFn: api.mix,
+    onSuccess: () => {
+      save.reset();
+      feedback.reset();
+    },
+  });
   const save = useMutation({ mutationFn: onSave });
+  const feedback = useMutation({
+    mutationFn: ({
+      id,
+      rating,
+    }: {
+      id: number;
+      rating: "fits" | "not_quite";
+    }) => api.rateMix(id, rating),
+  });
   const mix = generate.data;
   return (
     <Modal title="A mood becomes a mix" onClose={onClose}>
@@ -1141,16 +1163,53 @@ function MixDialog({
             </button>
             <button
               className="button"
-              disabled={save.isPending || generate.isPending}
+              disabled={save.isPending || generate.isPending || !!save.data}
               onClick={() => save.mutate(mix)}
             >
               <Plus size={16} />
-              {save.isPending ? "Saving…" : "Save playlist"}
+              {save.isPending
+                ? "Saving…"
+                : save.data
+                  ? "Saved"
+                  : "Save playlist"}
             </button>
           </div>
+          {save.data && !feedback.isSuccess && (
+            <div className="mix-feedback">
+              <span>Does this mix fit the moment?</span>
+              <button
+                className="button secondary compact"
+                disabled={feedback.isPending}
+                onClick={() =>
+                  feedback.mutate({ id: save.data.id, rating: "fits" })
+                }
+              >
+                Fits
+              </button>
+              <button
+                className="button secondary compact"
+                disabled={feedback.isPending}
+                onClick={() =>
+                  feedback.mutate({ id: save.data.id, rating: "not_quite" })
+                }
+              >
+                Not quite
+              </button>
+            </div>
+          )}
+          {feedback.isSuccess && (
+            <p className="privacy-note" role="status">
+              Thanks. Your rating was saved without storing the original prompt.
+            </p>
+          )}
           {save.error && (
             <p className="form-error" role="alert">
               {save.error.message}
+            </p>
+          )}
+          {feedback.error && (
+            <p className="form-error" role="alert">
+              {feedback.error.message}
             </p>
           )}
         </div>

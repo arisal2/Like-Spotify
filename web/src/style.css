@@ -631,6 +631,22 @@ main {
   align-items: center;
   gap: 0.75rem;
 }
+
+.mix-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.mix-feedback > span {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
 .track-labels,
 .track-row {
   display: grid;

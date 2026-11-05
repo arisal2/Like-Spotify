@@ -32,11 +32,16 @@ export const historySchema = z.object({
   enabled: z.boolean(),
   items: z.array(z.object({ songId: z.number().int(), playedAt: z.string() })),
 });
+export const savedMixSchema = z.object({
+  id: z.number().int(),
+  playlistId: z.number().int(),
+});
 export type Song = z.infer<typeof songSchema>;
 export type Playlist = z.infer<typeof playlistSchema>;
 export type Session = z.infer<typeof sessionSchema>;
 export type Mix = z.infer<typeof mixSchema>;
 export type History = z.infer<typeof historySchema>;
+export type SavedMix = z.infer<typeof savedMixSchema>;
 
 export class ApiError extends Error {
   readonly status: number;
@@ -128,5 +133,15 @@ export const api = {
     request("/mixes/preview", mixSchema, {
       method: "POST",
       body: JSON.stringify({ prompt }),
+    }),
+  saveMix: (mix: Mix) =>
+    request("/mixes", savedMixSchema, {
+      method: "POST",
+      body: JSON.stringify(mix),
+    }),
+  rateMix: (id: number, rating: "fits" | "not_quite") =>
+    request(`/mixes/${id}/feedback`, z.undefined(), {
+      method: "PUT",
+      body: JSON.stringify({ rating }),
     }),
 };

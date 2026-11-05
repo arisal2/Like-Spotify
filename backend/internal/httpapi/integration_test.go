@@ -116,6 +116,22 @@ func TestMySQLIntegration(t *testing.T) {
 		t.Fatalf("likes leaked: %s", data)
 	}
 	call(alice, "POST", "/api/v1/mixes/preview", map[string]string{"prompt": "focus for coding"}, 200)
+	data = call(alice, "POST", "/api/v1/mixes", map[string]any{
+		"name": "Quiet focus", "description": "A calm catalog-grounded mix.", "songIds": []int{1, 3}, "source": "local",
+	}, 201)
+	var savedMix store.SavedMix
+	if err := json.Unmarshal(data, &savedMix); err != nil {
+		t.Fatal(err)
+	}
+	call(bob, "PUT", fmt.Sprintf("/api/v1/mixes/%d/feedback", savedMix.ID), map[string]string{"rating": "fits"}, 404)
+	call(alice, "PUT", fmt.Sprintf("/api/v1/mixes/%d/feedback", savedMix.ID), map[string]string{"rating": "fits"}, 204)
+	var rating, snapshot string
+	queryErr := repo.DB.QueryRow("SELECT rating,song_ids FROM saved_mixes WHERE id=? AND user_id=(SELECT id FROM users WHERE username='alice')", savedMix.ID).Scan(&rating, &snapshot)
+	var snapshotIDs []int
+	jsonErr := json.Unmarshal([]byte(snapshot), &snapshotIDs)
+	if queryErr != nil || jsonErr != nil || rating != "fits" || len(snapshotIDs) != 2 || snapshotIDs[0] != 1 || snapshotIDs[1] != 3 {
+		t.Fatalf("saved mix provenance incorrect: rating=%q snapshot=%q query_err=%v json_err=%v", rating, snapshot, queryErr, jsonErr)
+	}
 	call(alice, "POST", "/api/v1/history/1", nil, 204)
 	call(alice, "POST", "/api/v1/history/3", nil, 204)
 	data = call(alice, "GET", "/api/v1/history", nil, 200)
