@@ -10,6 +10,7 @@ The product direction and prioritized roadmap live in [the PRD](docs/PRD.md).
 - Play music with a persistent queue, seek, volume, shuffle, and repeat controls
 - Create an account with secure password hashing and database-backed sessions
 - Like songs and create, rename, reorder, and delete playlists
+- Keep private listening history with clear and opt-out controls
 - Generate catalog-grounded mood mixes from a natural-language prompt
 - Run locally with Docker Compose or deploy to Kubernetes
 

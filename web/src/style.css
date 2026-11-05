@@ -621,6 +621,16 @@ main {
 .tracks-section {
   margin-top: 34px;
 }
+
+.history-section {
+  margin-block: 1.5rem 2.5rem;
+}
+
+.history-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 .track-labels,
 .track-row {
   display: grid;
@@ -1137,10 +1147,9 @@ form small {
   }
   .track-labels,
   .track-row {
-    grid-template-columns: 35px minmax(200px, 1fr) minmax(
-        120px,
-        0.6fr
-      ) 45px 150px;
+    grid-template-columns:
+      35px minmax(200px, 1fr) minmax(120px, 0.6fr)
+      45px 150px;
   }
 }
 @media (max-width: 1100px) {

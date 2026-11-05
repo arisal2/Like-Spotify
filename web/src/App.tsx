@@ -16,7 +16,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, setCSRF, type Mix, type Playlist, type Song } from "./lib/api";
 import { formatTime } from "./lib/queue";
@@ -50,6 +50,11 @@ export function App() {
     queryFn: api.likes,
     enabled: !!user,
   });
+  const history = useQuery({
+    queryKey: ["history", user?.id],
+    queryFn: api.history,
+    enabled: !!user,
+  });
   const songs = catalog.data?.songs ?? [];
   const playbackOwner = session.isPending
     ? null
@@ -57,6 +62,33 @@ export function App() {
       ? `user.${user.id}`
       : "guest";
   const player = usePlayer(songs, playbackOwner);
+  const lastRecorded = useRef("");
+  useEffect(() => {
+    if (
+      !user ||
+      !player.playing ||
+      !player.track ||
+      player.progress < 5 ||
+      history.data?.enabled === false
+    )
+      return;
+    const key = `${user.id}:${player.track.id}`;
+    if (lastRecorded.current === key) return;
+    lastRecorded.current = key;
+    void api
+      .recordHistory(player.track.id)
+      .then(() => client.invalidateQueries({ queryKey: ["history", user.id] }))
+      .catch(() => {
+        lastRecorded.current = "";
+      });
+  }, [
+    client,
+    history.data?.enabled,
+    player.playing,
+    player.progress,
+    player.track,
+    user,
+  ]);
   const collections = playlists.data?.playlists ?? [];
   const liked = likes.data?.songIds ?? [];
   const albumID = location.pathname.startsWith("/albums/")
@@ -77,6 +109,7 @@ export function App() {
       const song = songs.find((song) => song.id === id);
       return song ? [song] : [];
     });
+  const recent = byID(history.data?.items.map((item) => item.songId) ?? []);
   let visible = songs;
   if (isLikes) visible = byID(liked);
   else if (playlist) visible = byID(playlist.songIds);
@@ -91,6 +124,7 @@ export function App() {
     await Promise.all([
       client.invalidateQueries({ queryKey: ["playlists"] }),
       client.invalidateQueries({ queryKey: ["likes"] }),
+      client.invalidateQueries({ queryKey: ["history"] }),
     ]);
   };
   const action = async (work: () => Promise<unknown>, message?: string) => {
@@ -125,6 +159,7 @@ export function App() {
       setCSRF("");
       client.removeQueries({ queryKey: ["playlists"] });
       client.removeQueries({ queryKey: ["likes"] });
+      client.removeQueries({ queryKey: ["history"] });
       client.setQueryData(["session"], { user: null, csrfToken: "" });
       navigate("/");
     });
@@ -136,7 +171,7 @@ export function App() {
       : isSearch
         ? "Find your next favorite"
         : "Made for your everyday");
-  const libraryError = playlists.error ?? likes.error;
+  const libraryError = playlists.error ?? likes.error ?? history.error;
 
   return (
     <div className="app-shell">
@@ -387,6 +422,93 @@ export function App() {
                       ))}
                     </div>
                   </section>
+                  {user && history.data && (
+                    <section className="tracks-section history-section">
+                      <div className="section-heading">
+                        <div>
+                          <span className="eyebrow">
+                            YOUR LISTENING, YOUR CALL
+                          </span>
+                          <h2>Recently played</h2>
+                        </div>
+                        <div className="history-actions">
+                          {history.data.enabled &&
+                            history.data.items.length > 0 && (
+                              <button
+                                className="text-button"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      "Clear your listening history?",
+                                    )
+                                  )
+                                    void action(
+                                      api.clearHistory,
+                                      "Listening history cleared",
+                                    );
+                                }}
+                              >
+                                Clear
+                              </button>
+                            )}
+                          <button
+                            className="button secondary compact"
+                            disabled={busy}
+                            onClick={() =>
+                              void action(
+                                () =>
+                                  api.setHistoryEnabled(!history.data.enabled),
+                                history.data.enabled
+                                  ? "Listening history is off and existing history was deleted"
+                                  : "Listening history is on",
+                              )
+                            }
+                          >
+                            {history.data.enabled
+                              ? "Turn off history"
+                              : "Turn on history"}
+                          </button>
+                        </div>
+                      </div>
+                      {history.data.enabled && recent.length > 0 ? (
+                        <TrackList
+                          songs={recent.slice(0, 5)}
+                          currentID={player.track?.id}
+                          liked={liked}
+                          playlists={collections}
+                          busy={busy}
+                          onPlay={(items, index) => player.play(items, index)}
+                          onLike={(song) =>
+                            void action(() =>
+                              api.like(song.id, !liked.includes(song.id)),
+                            )
+                          }
+                          onAdd={(song, target) =>
+                            void action(
+                              () =>
+                                api.savePlaylist(
+                                  {
+                                    name: target.name,
+                                    songIds: [...target.songIds, song.id],
+                                  },
+                                  target.id,
+                                ),
+                              "Added to your playlist",
+                            )
+                          }
+                          onRemove={() => undefined}
+                          onReorder={() => undefined}
+                        />
+                      ) : (
+                        <p className="library-hint">
+                          {history.data.enabled
+                            ? "Play something and it will appear here. History is private to your account."
+                            : "Listening history is off. Nothing you play will be recorded."}
+                        </p>
+                      )}
+                    </section>
+                  )}
                   <section>
                     <div className="section-heading">
                       <div>

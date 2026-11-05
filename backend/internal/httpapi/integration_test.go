@@ -116,6 +116,29 @@ func TestMySQLIntegration(t *testing.T) {
 		t.Fatalf("likes leaked: %s", data)
 	}
 	call(alice, "POST", "/api/v1/mixes/preview", map[string]string{"prompt": "focus for coding"}, 200)
+	call(alice, "POST", "/api/v1/history/1", nil, 204)
+	call(alice, "POST", "/api/v1/history/3", nil, 204)
+	data = call(alice, "GET", "/api/v1/history", nil, 200)
+	if !bytes.Contains(data, []byte(`"songId":1`)) || !bytes.Contains(data, []byte(`"songId":3`)) {
+		t.Fatalf("history not recorded: %s", data)
+	}
+	data = call(bob, "GET", "/api/v1/history", nil, 200)
+	if bytes.Contains(data, []byte(`"songId"`)) {
+		t.Fatalf("history leaked: %s", data)
+	}
+	call(alice, "PUT", "/api/v1/history/settings", map[string]bool{"enabled": false}, 204)
+	call(alice, "POST", "/api/v1/history/2", nil, 204)
+	data = call(alice, "GET", "/api/v1/history", nil, 200)
+	if string(bytes.TrimSpace(data)) != `{"enabled":false,"items":[]}` {
+		t.Fatalf("disabled history retained data: %s", data)
+	}
+	call(alice, "PUT", "/api/v1/history/settings", map[string]bool{"enabled": true}, 204)
+	call(alice, "POST", "/api/v1/history/2", nil, 204)
+	call(alice, "DELETE", "/api/v1/history", nil, 204)
+	data = call(alice, "GET", "/api/v1/history", nil, 200)
+	if bytes.Contains(data, []byte(`"songId"`)) {
+		t.Fatalf("history was not cleared: %s", data)
+	}
 	// Recreate the handler against the same DB: sessions must survive a process rollout.
 	restarted := httptest.NewServer(New(repo, Config{Origin: "http://localhost:8080"}, recommend.Local{}, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	defer restarted.Close()

@@ -29,6 +29,14 @@ type Playlist struct {
 	Name    string  `json:"name"`
 	SongIDs []int64 `json:"songIds"`
 }
+type History struct {
+	Enabled bool          `json:"enabled"`
+	Items   []HistoryItem `json:"items"`
+}
+type HistoryItem struct {
+	SongID   int64     `json:"songId"`
+	PlayedAt time.Time `json:"playedAt"`
+}
 
 type Repository interface {
 	Ping(context.Context) error
@@ -42,6 +50,10 @@ type Repository interface {
 	DeletePlaylist(context.Context, int64, int64) error
 	Likes(context.Context, int64) ([]int64, error)
 	SetLike(context.Context, int64, int64, bool) error
+	History(context.Context, int64) (History, error)
+	RecordHistory(context.Context, int64, int64) error
+	SetHistoryEnabled(context.Context, int64, bool) error
+	ClearHistory(context.Context, int64) error
 }
 
 type MySQL struct{ DB *sql.DB }
@@ -214,5 +226,57 @@ func (s *MySQL) SetLike(ctx context.Context, uid, id int64, liked bool) error {
 	} else {
 		_, err = s.DB.ExecContext(ctx, "DELETE FROM liked_songs WHERE user_id=? AND song_id=?", uid, id)
 	}
+	return err
+}
+
+func (s *MySQL) History(ctx context.Context, uid int64) (History, error) {
+	result := History{Enabled: true, Items: []HistoryItem{}}
+	if err := s.DB.QueryRowContext(ctx, "SELECT COALESCE((SELECT history_enabled FROM user_preferences WHERE user_id=?),TRUE)", uid).Scan(&result.Enabled); err != nil {
+		return History{}, err
+	}
+	if !result.Enabled {
+		return result, nil
+	}
+	rows, err := s.DB.QueryContext(ctx, "SELECT song_id,played_at FROM listening_history WHERE user_id=? AND played_at>=UTC_TIMESTAMP()-INTERVAL 90 DAY ORDER BY played_at DESC LIMIT 20", uid)
+	if err != nil {
+		return History{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item HistoryItem
+		if err := rows.Scan(&item.SongID, &item.PlayedAt); err != nil {
+			return History{}, err
+		}
+		result.Items = append(result.Items, item)
+	}
+	return result, rows.Err()
+}
+
+func (s *MySQL) RecordHistory(ctx context.Context, uid, songID int64) error {
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO listening_history (user_id,song_id,played_at)
+		SELECT ?,?,UTC_TIMESTAMP() WHERE COALESCE((SELECT history_enabled FROM user_preferences WHERE user_id=?),TRUE)
+		ON DUPLICATE KEY UPDATE played_at=VALUES(played_at)`, uid, songID, uid)
+	return err
+}
+
+func (s *MySQL) SetHistoryEnabled(ctx context.Context, uid int64, enabled bool) error {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, "INSERT INTO user_preferences (user_id,history_enabled) VALUES (?,?) ON DUPLICATE KEY UPDATE history_enabled=VALUES(history_enabled)", uid, enabled); err != nil {
+		return err
+	}
+	if !enabled {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM listening_history WHERE user_id=?", uid); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *MySQL) ClearHistory(ctx context.Context, uid int64) error {
+	_, err := s.DB.ExecContext(ctx, "DELETE FROM listening_history WHERE user_id=?", uid)
 	return err
 }

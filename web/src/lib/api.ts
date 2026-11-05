@@ -28,10 +28,15 @@ export const mixSchema = z.object({
   songIds: z.array(z.number().int()),
   source: z.enum(["ai", "local", "local_fallback"]),
 });
+export const historySchema = z.object({
+  enabled: z.boolean(),
+  items: z.array(z.object({ songId: z.number().int(), playedAt: z.string() })),
+});
 export type Song = z.infer<typeof songSchema>;
 export type Playlist = z.infer<typeof playlistSchema>;
 export type Session = z.infer<typeof sessionSchema>;
 export type Mix = z.infer<typeof mixSchema>;
+export type History = z.infer<typeof historySchema>;
 
 export class ApiError extends Error {
   readonly status: number;
@@ -110,6 +115,15 @@ export const api = {
     request(`/likes/${id}`, z.undefined(), {
       method: liked ? "PUT" : "DELETE",
     }),
+  history: () => request("/history", historySchema),
+  recordHistory: (id: number) =>
+    request(`/history/${id}`, z.undefined(), { method: "POST" }),
+  setHistoryEnabled: (enabled: boolean) =>
+    request("/history/settings", z.undefined(), {
+      method: "PUT",
+      body: JSON.stringify({ enabled }),
+    }),
+  clearHistory: () => request("/history", z.undefined(), { method: "DELETE" }),
   mix: (prompt: string) =>
     request("/mixes/preview", mixSchema, {
       method: "POST",

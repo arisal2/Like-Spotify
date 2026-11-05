@@ -69,6 +69,10 @@ func New(repo store.Repository, cfg Config, generator recommend.Generator, logge
 	mux.Handle("GET /api/v1/likes", s.require(http.HandlerFunc(s.likes)))
 	mux.Handle("PUT /api/v1/likes/{id}", s.require(http.HandlerFunc(s.like)))
 	mux.Handle("DELETE /api/v1/likes/{id}", s.require(http.HandlerFunc(s.like)))
+	mux.Handle("GET /api/v1/history", s.require(http.HandlerFunc(s.history)))
+	mux.Handle("POST /api/v1/history/{id}", s.require(http.HandlerFunc(s.recordHistory)))
+	mux.Handle("PUT /api/v1/history/settings", s.require(http.HandlerFunc(s.historySettings)))
+	mux.Handle("DELETE /api/v1/history", s.require(http.HandlerFunc(s.clearHistory)))
 	mux.Handle("POST /api/v1/mixes/preview", s.require(http.HandlerFunc(s.preview)))
 	// Expose only music and artwork; the legacy PHP tree is never served.
 	if cfg.MediaDir != "" {
@@ -406,6 +410,59 @@ func (s *Server) like(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.repo.SetLike(r.Context(), current(r).User.ID, id, r.Method == "PUT"); err != nil {
+		s.internal(w, err)
+		return
+	}
+	w.WriteHeader(204)
+}
+func (s *Server) history(w http.ResponseWriter, r *http.Request) {
+	result, err := s.repo.History(r.Context(), current(r).User.ID)
+	if err != nil {
+		s.internal(w, err)
+		return
+	}
+	write(w, 200, result)
+}
+func (s *Server) recordHistory(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	if !s.validIDs([]int64{id}) {
+		fail(w, 404, "not_found", "Song not found")
+		return
+	}
+	uid := current(r).User.ID
+	if !s.limits.allow(fmt.Sprintf("history:%d", uid), 120, time.Minute) {
+		w.Header().Set("Retry-After", "60")
+		fail(w, 429, "rate_limit", "Too many playback events")
+		return
+	}
+	if err := s.repo.RecordHistory(r.Context(), uid, id); err != nil {
+		s.internal(w, err)
+		return
+	}
+	w.WriteHeader(204)
+}
+func (s *Server) historySettings(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Enabled *bool `json:"enabled"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	if body.Enabled == nil {
+		fail(w, 422, "validation", "Provide enabled")
+		return
+	}
+	if err := s.repo.SetHistoryEnabled(r.Context(), current(r).User.ID, *body.Enabled); err != nil {
+		s.internal(w, err)
+		return
+	}
+	w.WriteHeader(204)
+}
+func (s *Server) clearHistory(w http.ResponseWriter, r *http.Request) {
+	if err := s.repo.ClearHistory(r.Context(), current(r).User.ID); err != nil {
 		s.internal(w, err)
 		return
 	}

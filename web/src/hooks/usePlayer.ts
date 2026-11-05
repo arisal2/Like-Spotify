@@ -16,7 +16,9 @@ type StoredPlayback = {
 
 function readStored(owner: string): StoredPlayback | null {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(storagePrefix + owner) ?? "null");
+    const value: unknown = JSON.parse(
+      localStorage.getItem(storagePrefix + owner) ?? "null",
+    );
     if (!value || typeof value !== "object") return null;
     const state = value as Partial<StoredPlayback>;
     if (
@@ -39,7 +41,10 @@ function readStored(owner: string): StoredPlayback | null {
   }
 }
 
-export function usePlayer(catalog: Song[] = [], owner: string | null = "guest") {
+export function usePlayer(
+  catalog: Song[] = [],
+  owner: string | null = "guest",
+) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const [queue, setQueue] = useState<Song[]>([]);
   const original = useRef<Song[]>([]);
@@ -75,10 +80,15 @@ export function usePlayer(catalog: Song[] = [], owner: string | null = "guest") 
     audio.current = element;
     const time = () => setProgress(element.currentTime);
     const loaded = () => {
-      const mediaDuration = Number.isFinite(element.duration) ? element.duration : 0;
+      const mediaDuration = Number.isFinite(element.duration)
+        ? element.duration
+        : 0;
       setDuration(mediaDuration);
       if (pendingSeek.current > 0 && mediaDuration > 0) {
-        element.currentTime = Math.min(pendingSeek.current, Math.max(0, mediaDuration - 1));
+        element.currentTime = Math.min(
+          pendingSeek.current,
+          Math.max(0, mediaDuration - 1),
+        );
         setProgress(element.currentTime);
         pendingSeek.current = 0;
       }
@@ -113,8 +123,10 @@ export function usePlayer(catalog: Song[] = [], owner: string | null = "guest") 
     audio.current?.pause();
     const saved = readStored(owner);
     const byID = new Map(catalog.map((song) => [song.id, song]));
-    const restoredQueue = saved?.queueIDs.flatMap((id) => byID.get(id) ?? []) ?? [];
-    const restoredOriginal = saved?.originalIDs.flatMap((id) => byID.get(id) ?? []) ?? [];
+    const restoredQueue =
+      saved?.queueIDs.flatMap((id) => byID.get(id) ?? []) ?? [];
+    const restoredOriginal =
+      saved?.originalIDs.flatMap((id) => byID.get(id) ?? []) ?? [];
     const restoredIndex = saved
       ? restoredQueue.findIndex((song) => song.id === saved.trackID)
       : -1;
@@ -124,7 +136,9 @@ export function usePlayer(catalog: Song[] = [], owner: string | null = "guest") 
     lastStoredSecond.current = -1;
     lastStoredSettings.current = "";
     setQueue(restoredQueue);
-    original.current = restoredOriginal.length ? restoredOriginal : restoredQueue;
+    original.current = restoredOriginal.length
+      ? restoredOriginal
+      : restoredQueue;
     setIndex(restoredIndex >= 0 ? restoredIndex : 0);
     setPlaying(false);
     setShuffle(saved?.shuffle ?? false);
@@ -182,6 +196,8 @@ export function usePlayer(catalog: Song[] = [], owner: string | null = "guest") 
       setPlaying(false);
     } else {
       autoPlayNextTrack.current = true;
+      setProgress(0);
+      setDuration(0);
       setIndex((value) => value + 1);
     }
   }, [index, queue.length]);
@@ -239,6 +255,8 @@ export function usePlayer(catalog: Song[] = [], owner: string | null = "guest") 
       playAudio();
     } else {
       autoPlayNextTrack.current = true;
+      setProgress(0);
+      setDuration(0);
       setIndex((value) => value - 1);
     }
   };
