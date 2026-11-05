@@ -112,6 +112,7 @@ protection and delivery.
 
 ## Documentation
 
+- [Product suite PRD](docs/product-suite-prd.md)
 - [Documentation index](docs/README.md)
 - [Architecture and design](docs/architecture.md)
 - [Development and testing](docs/development.md)
