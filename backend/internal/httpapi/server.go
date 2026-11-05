@@ -123,7 +123,15 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		id := randomToken()
 		w.Header().Set("X-Request-ID", id)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Referrer-Policy", "same-origin")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
+		w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
+		if s.config.SecureCookies {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 		w.Header().Set("Cache-Control", "no-store")
 		defer func() {
 			if recovered := recover(); recovered != nil {
@@ -282,7 +290,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, u store.Us
 		s.internal(w, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "ls_session", Value: token, Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteLaxMode, MaxAge: 604800, Expires: expires})
+	http.SetCookie(w, &http.Cookie{Name: "ls_session", Value: token, Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteStrictMode, MaxAge: 604800, Expires: expires})
 	write(w, status, map[string]any{"user": u, "csrfToken": csrf})
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
@@ -291,7 +299,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 		s.internal(w, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "ls_session", Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteLaxMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "ls_session", Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteStrictMode, MaxAge: -1})
 	w.WriteHeader(204)
 }
 func (s *Server) playlists(w http.ResponseWriter, r *http.Request) {

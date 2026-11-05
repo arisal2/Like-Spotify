@@ -62,3 +62,16 @@ func TestLimiter(t *testing.T) {
 		t.Fatal("unrelated identity blocked")
 	}
 }
+
+func TestSecurityHeaders(t *testing.T) {
+	w := httptest.NewRecorder()
+	testHandler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/catalog", nil))
+	for _, header := range []string{"Content-Security-Policy", "Cross-Origin-Opener-Policy", "Cross-Origin-Resource-Policy", "Permissions-Policy", "Referrer-Policy", "X-Content-Type-Options", "X-Frame-Options"} {
+		if w.Header().Get(header) == "" {
+			t.Errorf("missing %s", header)
+		}
+	}
+	if got := w.Header().Get("Strict-Transport-Security"); got != "" {
+		t.Errorf("HSTS must not be sent over development HTTP: %q", got)
+	}
+}

@@ -16,6 +16,8 @@ services:
       timeout: 3s
       retries: 30
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
   migrate:
     image: like-spotify-api:local
     build:
@@ -27,6 +29,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
   api:
     image: like-spotify-api:local
     build:
@@ -44,6 +49,11 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
   web:
     image: like-spotify-web:local
     build:
@@ -54,5 +64,12 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /var/cache/nginx:size=16m,uid=101,gid=101
+      - /var/run:size=1m,uid=101,gid=101
 volumes:
   mysql-data:

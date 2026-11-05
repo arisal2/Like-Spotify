@@ -34,6 +34,11 @@ jobs:
       - run: go test -race ./...
         env:
           TEST_MYSQL_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/?parseTime=true'
+      - name: Check Go dependencies for known vulnerabilities
+        uses: golang/govulncheck-action@v1
+        with:
+          go-package: ./...
+          work-dir: backend
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -47,6 +52,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm test
       - run: npm run build
@@ -93,3 +99,16 @@ jobs:
       - run: kubectl kustomize deploy/k8s/local > /tmp/local.yaml
       - run: kubectl kustomize deploy/k8s/gitops > /tmp/gitops.yaml
       - run: kubectl kustomize deploy/argocd > /tmp/argocd.yaml
+  security-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan repository and deployment configuration
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'

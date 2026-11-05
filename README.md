@@ -221,6 +221,9 @@ For production:
 - Playlist ownership checks in database queries
 - Strict JSON decoding, request-size limits, timeouts, and basic rate limits
 - Non-root, read-only application containers with dropped Linux capabilities
+- Restricted Pod Security admission, disabled service-account tokens, and default-deny network policies
+- Strict browser security headers, including CSP, frame denial, permissions policy, and cross-origin isolation
+- CI checks for known dependency vulnerabilities, leaked secrets, and deployment misconfigurations
 - AI outputs constrained by a schema and validated against the catalog
 
 The in-memory rate limiter is intended for this project-sized deployment. A larger multi-replica public service should use a shared limiter at the gateway or in Redis.

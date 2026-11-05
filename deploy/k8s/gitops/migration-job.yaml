@@ -11,6 +11,9 @@ spec:
   activeDeadlineSeconds: 180
   ttlSecondsAfterFinished: 300
   template:
+    metadata:
+      labels:
+        app: migrate
     spec:
       restartPolicy: Never
       automountServiceAccountToken: false
