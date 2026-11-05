@@ -2,6 +2,8 @@
 
 A small, full-stack music app rebuilt with a Go API, React with TypeScript, MySQL, Docker, and Kubernetes.
 
+The product direction and prioritized roadmap live in [the PRD](docs/PRD.md).
+
 ## What it does
 
 - Browse and search the bundled instrumental catalog
