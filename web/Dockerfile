@@ -1,7 +1,7 @@
-FROM --platform=$BUILDPLATFORM node:24-alpine AS build
+FROM --platform=$BUILDPLATFORM node:26-alpine AS build
 WORKDIR /src
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+RUN npm install --global npm@12.2.2 && npm ci
 COPY web/ ./
 RUN npm run build
 
