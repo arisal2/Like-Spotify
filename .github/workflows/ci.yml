@@ -1,7 +1,7 @@
 name: Test and package
 on:
   push:
-    branches: ['**']
+    branches: [master]
   pull_request:
   workflow_call:
 permissions:
@@ -68,11 +68,11 @@ jobs:
       - run: cp .env.example .env
       - name: Generate disposable audio fixture
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
           mkdir -p assets/music assets/images/artwork
-          ffmpeg -hide_banner -loglevel error -f lavfi -i 'sine=frequency=440:duration=30' -c:a libmp3lame assets/music/acousticbreeze.mp3
-      - run: docker compose up --build -d
+          node web/e2e/generate-audio.mjs assets/music/ci-tone.wav
+      - name: Build each application image once
+        run: docker compose build api web
+      - run: docker compose up --no-build -d
       - run: |
           for attempt in $(seq 1 60); do
             if curl --fail http://localhost:8080/api/v1/catalog >/dev/null; then exit 0; fi
@@ -82,10 +82,17 @@ jobs:
           exit 1
       - run: npm ci
         working-directory: web
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('web/package-lock.json') }}
       - run: npx playwright install --with-deps chromium
         working-directory: web
       - run: npm run test:e2e
         working-directory: web
+        env:
+          E2E_AUDIO_FIXTURE: '1'
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

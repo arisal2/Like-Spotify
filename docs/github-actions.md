@@ -28,9 +28,12 @@ are explicitly needed by a workflow.
 
 ## 2. Understand the workflows
 
-`Test and package` runs on pull requests and branch pushes. It checks Go and
+`Test and package` runs on pull requests, pushes to `master`, and reusable
+workflow calls. It checks Go and
 MySQL integration, frontend lint/tests/build, browser behavior, Kubernetes
-rendering, dependencies, secrets, and configuration.
+rendering, dependencies, secrets, and configuration. Browser tests generate a
+temporary WAV tone with Node, build each application image once, and cache the
+Chromium download.
 
 After a successful **push** run on `master`, `Build and promote` builds and
 publishes SHA-tagged API and web images for AMD64 and ARM64. It updates the
