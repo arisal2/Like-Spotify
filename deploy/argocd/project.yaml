@@ -19,6 +19,8 @@ spec:
     - group: ''
       kind: Service
     - group: ''
+      kind: ServiceAccount
+    - group: ''
       kind: PersistentVolumeClaim
     - group: apps
       kind: Deployment
@@ -28,5 +30,7 @@ spec:
       kind: StatefulSet
     - group: batch
       kind: Job
+    - group: networking.k8s.io
+      kind: NetworkPolicy
   orphanedResources:
     warn: true

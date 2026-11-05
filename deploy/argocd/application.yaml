@@ -9,7 +9,7 @@ spec:
   project: like-spotify
   source:
     repoURL: https://github.com/arisal2/Like-Spotify.git
-    targetRevision: master
+    targetRevision: deploy/local
     path: deploy/k8s/gitops
   destination:
     server: https://kubernetes.default.svc

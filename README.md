@@ -120,9 +120,9 @@ GitHub Actions runs backend race tests, isolated MySQL integration tests, fronte
 The delivery path is GitOps-based:
 
 ```text
-push to master -> CI checks -> multi-architecture GHCR images
-               -> pin tested commit SHA in Git
-               -> Argo CD sync -> migration -> API and web rollout
+merge to master -> CI checks -> multi-architecture GHCR images
+                -> promote tested revision to deploy/local
+                -> local Argo CD sync -> migration -> API and web rollout
 ```
 
 The `Test and package` workflow is the required CI gate. After it succeeds on a
@@ -131,13 +131,16 @@ push to `master`, `Build and promote`:
 1. Builds the API and web images for AMD64 and ARM64.
 2. Publishes immutable commit tags and a convenience `main` tag to GitHub
    Container Registry.
-3. Replaces both image tags in `deploy/k8s/gitops/kustomization.yaml` with the
-   tested commit SHA.
-4. Commits that deployment revision to `master` using GitHub's Actions bot.
+3. Copies the tested repository tree to the automation-owned `deploy/local`
+   branch and pins both images to the tested commit SHA.
+4. Pushes the deployment commit to `deploy/local` using GitHub's Actions bot.
 
-GitHub does not recursively start workflows for that bot commit. Argo CD sees
-the Git change and reconciles it. A newer `master` revision is never replaced by
-an older CI run.
+GitHub does not recursively start workflows for that bot commit. Argo CD watches
+only `deploy/local`, so an untested change to `master` cannot trigger a rollout.
+The deployment branch is created by the first successful promotion; do not edit
+it manually. Promotion checks for a newer `master` revision before pushing.
+The local cluster must be running and able to reach GitHub and GHCR. A stopped
+cluster reconciles when it starts again.
 
 The Argo CD application enables automatic sync, pruning, drift self-healing,
 retry with backoff, and namespace creation. Resources deploy in this order:
@@ -180,8 +183,10 @@ kubectl apply -k deploy/argocd
 kubectl get applications -n argocd
 ```
 
-The included Application targets the in-cluster Kubernetes API and the
-`like-spotify` namespace. The current GitOps overlay is configured for the
+The included Application targets `deploy/local`, the in-cluster Kubernetes API,
+and the `like-spotify` namespace. Until the first successful post-merge
+promotion creates that branch, Argo CD will report the source as unavailable.
+The current GitOps overlay is configured for the
 Docker Desktop URL, `http://localhost:8080`. Change its ConfigMap patch and add
 the Gateway template before using it on a public HTTPS domain.
 

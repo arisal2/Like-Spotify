@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: gitops-${{ github.event.workflow_run.head_branch }}
+  group: gitops-local
   cancel-in-progress: false
 
 jobs:
@@ -80,6 +80,15 @@ jobs:
         env:
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          if git ls-remote --exit-code --heads origin refs/heads/deploy/local >/dev/null; then
+            git fetch origin refs/heads/deploy/local:refs/remotes/origin/deploy/local
+            git switch -c deploy-local refs/remotes/origin/deploy/local
+            # Keep the deployment branch history while replacing its tree with
+            # the tested revision. This runs only in the disposable CI checkout.
+            git read-tree --reset -u "$DEPLOY_SHA"
+          else
+            git switch -c deploy-local
+          fi
           sed -i "s/^    newTag: .*/    newTag: ${DEPLOY_SHA}/" deploy/k8s/gitops/kustomization.yaml
       - name: Validate rendered manifests
         if: steps.revision.outputs.promote == 'true'
@@ -91,10 +100,15 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add deploy/k8s/gitops/kustomization.yaml
+          git add -A
           if git diff --cached --quiet; then
             echo 'GitOps overlay already points at this revision.'
             exit 0
           fi
           git commit -m "deploy: ${DEPLOY_SHA} [skip ci]"
-          git push origin HEAD:master
+          # Refuse to promote if master changed while preparing this deployment.
+          if [ "$(git ls-remote origin refs/heads/master | cut -f1)" != "$DEPLOY_SHA" ]; then
+            echo 'A newer master revision exists; skipping promotion.'
+            exit 0
+          fi
+          git push origin HEAD:refs/heads/deploy/local
