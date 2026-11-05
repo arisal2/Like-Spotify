@@ -727,7 +727,7 @@ export function App() {
               <footer className="content-footer">
                 <span className="brand">like.</span>
                 <p>Less scrolling. More listening.</p>
-                <span>Demo catalog · Music by Bensound</span>
+                <span>Demo catalog</span>
               </footer>
             </>
           )}
