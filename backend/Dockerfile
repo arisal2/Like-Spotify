@@ -1,9 +1,11 @@
-FROM golang:1.27.3-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS build
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /app ./cmd/server
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /app ./cmd/server
 
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app

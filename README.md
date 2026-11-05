@@ -1,275 +1,88 @@
-# Like Spotify
+# Like
 
-A small, full-stack music app rebuilt with a Go API, React with TypeScript, MySQL, Docker, and Kubernetes.
+An independent music-listening project built with Go, React, and Kubernetes.
+Browse a small catalog, keep playlists and favorites, and turn a mood into a
+playable mix.
 
-The product direction and prioritized roadmap live in [the PRD](docs/PRD.md).
+## What you can do
 
-## What it does
+- Play, seek, shuffle, repeat, and resume a queue on the same device.
+- Create an account, like tracks, and organize playlists.
+- Review or clear your private listening history, or turn it off entirely.
+- Generate, adjust, save, and rate a mood mix. Local recommendations work
+  without an AI provider.
 
-- Browse and search the demo instrumental catalog
-- Play music with a persistent queue, seek, volume, shuffle, and repeat controls
-- Create an account with secure password hashing and database-backed sessions
-- Like songs and create, rename, reorder, and delete playlists
-- Keep private listening history with clear and opt-out controls
-- Generate, save, and privately rate catalog-grounded mood mixes from a natural-language prompt
-- Refine mix previews by energy or by how much they change from the previous preview
-- Run locally with Docker Compose or deploy to Kubernetes
+## Get started
 
-The mood-mix feature works without an external service by matching hand-curated catalog tags. When OpenAI is configured, it uses the Responses API with Structured Outputs, validates every returned song ID, and falls back to the local generator if the provider is unavailable. Prompts and the demo catalog are sent to OpenAI when this mode is enabled; account and listening data are not included.
-
-## Architecture
-
-```text
-Browser -> nginx / React -> Go JSON API -> MySQL
-                         -> separately supplied audio and artwork
-                         -> OpenAI (optional mood mixes)
-```
-
-- `web/`: React, TypeScript, Vite, TanStack Query, Zod, Vitest, and Playwright
-- `backend/`: Go HTTP API, catalog, recommendation logic, MySQL repository, and migrations
-- `deploy/k8s/`: Kubernetes base, local overlay, migration Job, and Gateway API example
-- `assets/`: optional local music and artwork, stored outside Git
-
-## Local development with Docker
-
-Requirements: Docker Desktop with Compose.
-
-Supply licensed media separately under `assets/music` and
-`assets/images/artwork`; these files are not committed or built into images.
-The catalog lists the expected filenames in `backend/internal/catalog/songs.json`.
-Set `MEDIA_PATH` in `.env` to use another directory. Without media the catalog
-still loads, but audio and artwork requests return 404.
+You need Docker Desktop with Compose. Music and artwork are stored separately
+from Git and container images. Place licensed files in `assets/music/` and
+`assets/images/artwork/`, using the filenames listed in
+[`songs.json`](backend/internal/catalog/songs.json). Without them, the catalog
+loads but media playback and artwork are unavailable.
 
 ```bash
 cp .env.example .env
-# Replace both example database passwords in .env.
+# Set your own database passwords in .env.
 docker compose up --build
 ```
 
-Open <http://localhost:8080>. The API is also exposed at <http://localhost:8081> for local inspection. MySQL is bound to `127.0.0.1:3307`.
+Open <http://localhost:8080>. Compose keeps database data in a named volume;
+`docker compose down` stops the services without deleting it. Set `MEDIA_PATH`
+in `.env` to mount media from a different local directory.
 
-The migration container runs before the API and is safe to run again. Application data stays in the `mysql-data` Docker volume across restarts.
+## How it fits together
 
-Useful commands:
-
-```bash
-docker compose ps
-docker compose logs -f api web
-docker compose down
+```text
+Browser → React / nginx → Go API → MySQL
+                               ↘ media storage
+                               ↘ optional AI provider
 ```
 
-`docker compose down` preserves the database. Adding `--volumes` deletes local application data.
+The Go API owns sessions, playlists, listening history, and mix generation.
+React handles browsing and playback. Local mood matching uses catalog tags;
+when configured, the AI provider receives the prompt and catalog metadata,
+and the API validates its result against the catalog. Account details and
+listening history are not included in the provider request.
 
-## Run the code directly
+## Kubernetes and delivery
 
-Requirements: Go 1.26 or newer, Node.js 24, npm, and MySQL 8.4.
+The local cluster uses GitOps: after a change to `master` passes CI, GitHub
+Actions publishes the API and web images and promotes their tested revision to
+`deploy/local`. Argo CD watches that branch, runs the migration hook, and syncs
+the workloads into the `like-spotify` namespace.
 
-```bash
-cd web
-npm install
-npm run dev
-```
+- [Set up Argo CD and the local cluster](docs/argo-cd.md)
+- [Set up and troubleshoot GitHub Actions](docs/github-actions.md)
 
-In another terminal, configure a MySQL DSN, run migrations, and start the API:
+On Docker Desktop, the app is at <http://localhost:8080> and Argo CD is at
+<https://localhost:8082>. Docker Desktop and Kubernetes must be running. The
+local services may be reachable from your network depending on Docker Desktop's
+network settings.
 
-```bash
-cd backend
-export DATABASE_DSN='like_spotify:password@tcp(127.0.0.1:3307)/like_spotify?parseTime=true'
-go run ./cmd/server migrate
-go run ./cmd/server
-```
-
-The Vite development server proxies `/api` and `/media` to the Go service.
-
-## Optional OpenAI mood mixes
-
-Set both values in `.env`:
-
-```dotenv
-OPENAI_API_KEY=your-api-key
-OPENAI_MODEL=a-model-in-your-account-that-supports-structured-outputs
-```
-
-The API key stays on the server. Do not add `.env` or Kubernetes secret files to Git.
-
-## Tests and checks
+## Development checks
 
 ```bash
 cd backend
 go test -race ./...
+go vet ./...
 
 cd ../web
+npm ci
 npm run lint
 npm test
 npm run build
 ```
 
-The MySQL integration test creates and drops an isolated, randomly named database. Point it at an administrative test DSN:
+For browser tests, start the Compose stack with media available, then run
+`npx playwright install chromium` and `npm run test:e2e` from `web/`.
 
-```bash
-cd backend
-TEST_MYSQL_DSN='root:password@tcp(127.0.0.1:3307)/?parseTime=true' go test ./internal/httpapi -run TestMySQLIntegration
-```
+## Security and media
 
-For browser tests, start the Compose stack and install Playwright's browser once:
+Passwords are hashed; session cookies, CSRF checks, and server-side ownership
+checks protect account operations. Secrets and local media are excluded from
+Git. Kubernetes workloads use non-root containers and network policies. See
+[SECURITY.md](SECURITY.md) for reporting and deployment guidance.
 
-```bash
-cd web
-npx playwright install chromium
-npm run test:e2e
-```
-
-GitHub Actions runs backend race tests, isolated MySQL integration tests, frontend checks, browser tests, Kubernetes rendering, and multi-architecture release builds.
-
-## CI/CD and Argo CD
-
-The delivery path is GitOps-based:
-
-```text
-merge to master -> CI checks -> multi-architecture GHCR images
-                -> promote tested revision to deploy/local
-                -> local Argo CD sync -> migration -> API and web rollout
-```
-
-The `Test and package` workflow is the required CI gate. After it succeeds on a
-push to `master`, `Build and promote`:
-
-1. Builds the API and web images for AMD64 and ARM64.
-2. Publishes immutable commit tags and a convenience `main` tag to GitHub
-   Container Registry.
-3. Copies the tested repository tree to the automation-owned `deploy/local`
-   branch and pins both images to the tested commit SHA.
-4. Pushes the deployment commit to `deploy/local` using GitHub's Actions bot.
-
-GitHub does not recursively start workflows for that bot commit. Argo CD watches
-only `deploy/local`, so an untested change to `master` cannot trigger a rollout.
-The deployment branch is created by the first successful promotion; do not edit
-it manually. Promotion checks for a newer `master` revision before pushing.
-The local cluster must be running and able to reach GitHub and GHCR. A stopped
-cluster reconciles when it starts again.
-
-The Argo CD application enables automatic sync, pruning, drift self-healing,
-retry with backoff, and namespace creation. Resources deploy in this order:
-
-1. Namespace
-2. Configuration
-3. MySQL Service and StatefulSet
-4. Idempotent migration Job
-5. API and web Deployments
-
-The migration is an Argo CD sync hook and is deleted after success. A failed
-migration stops the later rollout.
-
-The local GitOps deployment mounts a separate `media` PVC read-only into the
-API. Populate it with licensed media before the first rollout (the import pod
-and files remain local to your cluster):
-
-```bash
-kubectl apply -n like-spotify -f deploy/k8s/gitops/media-pvc.yaml
-kubectl apply -f deploy/k8s/media-import.yaml
-kubectl wait --for=condition=Ready pod/media-import -n like-spotify --timeout=180s
-kubectl cp assets/. like-spotify/media-import:/media
-kubectl delete pod media-import -n like-spotify
-```
-
-The claim is a separate data volume; preserve or back it up when replacing the
-cluster. A local `media-backup/` copy can be kept in the project directory; it
-is ignored by Git and excluded from Docker builds. A second copy on a different
-device protects against loss of this computer. For a hosted deployment, use
-licensed object storage instead.
-
-Before the first sync, create `app-secrets` outside Git. The existing local
-secret can be retained on Docker Desktop. For a new cluster:
-
-```bash
-kubectl create namespace like-spotify
-kubectl create secret generic app-secrets -n like-spotify \
-  --from-literal=MYSQL_PASSWORD='replace-me' \
-  --from-literal=MYSQL_ROOT_PASSWORD='replace-me' \
-  --from-literal=DATABASE_DSN='like_spotify:replace-me@tcp(mysql:3306)/like_spotify?parseTime=true'
-```
-
-For a hosted cluster, manage this Secret with your cloud secret manager and an
-operator such as External Secrets. If the GHCR packages are private, also add a
-registry pull secret and reference it from the API, migration, and web pod
-specifications.
-
-Install Argo CD, wait for it, and bootstrap the application after these files
-have been committed and pushed:
-
-```bash
-kubectl create namespace argocd
-kubectl apply --server-side --force-conflicts -n argocd \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-kubectl wait --for=condition=Available deployment/argocd-server \
-  -n argocd --timeout=300s
-kubectl apply -k deploy/argocd
-kubectl get applications -n argocd
-```
-
-On Docker Desktop, the local Argo UI is exposed at <https://localhost:8082>
-and the application at <http://localhost:8080> by separate LoadBalancer
-Services. Keep Docker Desktop and Kubernetes running; no port-forward command
-is needed. These ports may also be reachable from your network depending on
-Docker Desktop's networking settings. The API and database remain internal.
-
-The included Application targets `deploy/local`, the in-cluster Kubernetes API,
-and the `like-spotify` namespace. Until the first successful post-merge
-promotion creates that branch, Argo CD will report the source as unavailable.
-The current GitOps overlay is configured for the
-Docker Desktop URL, `http://localhost:8080`. Change its ConfigMap patch and add
-the Gateway template before using it on a public HTTPS domain.
-
-## Kubernetes
-
-The local overlay includes a single-replica MySQL StatefulSet for learning and development. For a hosted deployment, use a managed MySQL service and object storage for media, then remove the in-cluster database resources.
-
-Create local secrets without committing them:
-
-```bash
-cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
-# Replace the example passwords and keep DATABASE_DSN in sync.
-kubectl apply -k deploy/k8s/local
-```
-
-Load or publish the `like-spotify-api:local` and `like-spotify-web:local` images so they are visible to your cluster. Then run the migration Job before rolling out a release:
-
-```bash
-kubectl apply -f deploy/k8s/migration-job.yaml
-kubectl wait --for=condition=complete job/migrate-v1 -n like-spotify --timeout=180s
-kubectl apply -k deploy/k8s/local
-```
-
-Open <http://localhost:8080> on Docker Desktop. Other Kubernetes environments
-need a LoadBalancer implementation or can use `kubectl port-forward -n
-like-spotify service/web 8080:8080` instead.
-
-For production:
-
-- Build immutable images and reference them by commit SHA or digest.
-- Set `APP_ENV=production`, an HTTPS `APP_ORIGIN`, and `COOKIE_SECURE=true`.
-- Store secrets in your cloud secret manager and synchronize them into Kubernetes.
-- Configure backups and verify restores before relying on any database.
-- Install a Gateway API controller, update `deploy/k8s/gateway.example.yaml`, and provide a TLS certificate.
-- Run the versioned migration Job once before deploying the matching API image.
-
-## Security model
-
-- Prepared statements for all database values
-- Bcrypt password hashes
-- Opaque, hashed session tokens stored in MySQL
-- HTTP-only, SameSite cookies and per-session CSRF tokens
-- Same-origin checks for mutations
-- Playlist ownership checks in database queries
-- Strict JSON decoding, request-size limits, timeouts, and basic rate limits
-- Non-root, read-only application containers with dropped Linux capabilities
-- Restricted Pod Security admission, disabled service-account tokens, and default-deny network policies
-- Strict browser security headers, including CSP, frame denial, permissions policy, and cross-origin isolation
-- CI checks for known dependency vulnerabilities, leaked secrets, and deployment misconfigurations
-- AI outputs constrained by a schema and validated against the catalog
-
-The in-memory rate limiter is intended for this project-sized deployment. A larger multi-replica public service should use a shared limiter at the gateway or in Redis.
-
-## Catalog and licensing
-
-The original project's demo tracks are identified as Bensound music. Review the applicable music and artwork licenses before making a public or commercial deployment.
+The `media-backup/` directory is ignored by Git and Docker. It is still on the
+same machine, so keep another backup elsewhere. Ensure you have the rights and
+attribution required for every audio track and image you supply.
