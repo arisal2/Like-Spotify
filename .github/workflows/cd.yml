@@ -1,0 +1,100 @@
+name: Build and promote
+
+on:
+  workflow_run:
+    workflows: ['Test and package']
+    types: [completed]
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: gitops-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'master'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - component: api
+            dockerfile: backend/Dockerfile
+          - component: web
+            dockerfile: web/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "repository=${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:main
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+
+  promote:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - name: Ensure this is still the newest tested revision
+        id: revision
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$(git rev-parse HEAD)" = "$DEPLOY_SHA" ]; then
+            echo 'promote=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'promote=false' >> "$GITHUB_OUTPUT"
+            echo 'A newer revision is already on master; its CI run will promote it.'
+          fi
+      - name: Pin GitOps images to the tested revision
+        if: steps.revision.outputs.promote == 'true'
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          sed -i "s/^    newTag: .*/    newTag: ${DEPLOY_SHA}/" deploy/k8s/gitops/kustomization.yaml
+      - name: Validate rendered manifests
+        if: steps.revision.outputs.promote == 'true'
+        run: kubectl kustomize deploy/k8s/gitops > /tmp/like-spotify-gitops.yaml
+      - name: Commit the deployment revision
+        if: steps.revision.outputs.promote == 'true'
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add deploy/k8s/gitops/kustomization.yaml
+          if git diff --cached --quiet; then
+            echo 'GitOps overlay already points at this revision.'
+            exit 0
+          fi
+          git commit -m "deploy: ${DEPLOY_SHA} [skip ci]"
+          git push origin HEAD:master
