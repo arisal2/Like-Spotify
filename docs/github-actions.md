@@ -29,17 +29,34 @@ are explicitly needed by a workflow.
 ## 2. Understand the workflows
 
 `Test and package` runs on pull requests, pushes to `master`, and reusable
-workflow calls. It checks Go and
-MySQL integration, frontend lint/tests/build, browser behavior, Kubernetes
-rendering, dependencies, secrets, and configuration. Browser tests generate a
-temporary WAV tone with Node, build each application image once, and cache the
-Chromium download.
+workflow calls. A change-detection job selects only the checks affected by the
+changed paths:
 
-After a successful **push** run on `master`, `Build and promote` builds and
-publishes SHA-tagged API and web images for AMD64 and ARM64. It updates the
-automation-owned `deploy/local` branch with the tested tree and image tags.
-Argo CD watches only that branch. A stale run checks the current `master` tip
-before promotion, and promotion pushes normally without a force update.
+| Changed paths                            | Selected checks                   |
+| ---------------------------------------- | --------------------------------- |
+| `backend/**`                             | backend, browser, security        |
+| `web/**`                                 | frontend, browser, security       |
+| `deploy/**`                              | Kubernetes rendering and security |
+| workflow or shared runtime configuration | full relevant suite               |
+| Markdown only                            | documentation formatting          |
+
+The final `ci-gate` job fails if any selected job fails and accepts jobs that
+were intentionally skipped. Make `ci-gate` the required branch-protection
+check instead of requiring every component job individually. Reusable workflow
+calls, including tagged releases, deliberately run the full suite.
+
+Browser tests generate a temporary WAV tone with Node, build each application
+image once, and cache the Chromium download.
+
+After a successful **push** run on `master`, `Build and promote` examines the
+merged commit. It publishes only changed API or web images for AMD64 and ARM64.
+Changed images receive an immutable commit-SHA tag; unchanged components keep
+their previously deployed immutable tag. Deployment-only changes update
+`deploy/local` without rebuilding images, while documentation-only changes do
+not publish or promote anything.
+
+Argo CD watches only `deploy/local`. A stale run checks the current `master`
+tip before promotion, and promotion pushes normally without a force update.
 
 Release tags trigger a separate image publishing workflow. Dependabot opens
 dependency update PRs; review their changelogs and checks before merging.
@@ -71,3 +88,8 @@ the Go compiler under emulation while preserving multi-architecture images.
   GitHub Actions authentication is not automatically available to Kubernetes.
 - **A newer change arrived:** the older delivery intentionally skips promotion;
   inspect the newest successful `master` run instead.
+- **A component job was skipped:** inspect the `changes` job; path selection is
+  expected. The required `ci-gate` job still verifies the selected jobs.
+- **An unchanged component kept an older image tag:** this is intentional. Its
+  source did not change, so GitOps preserves the previously tested immutable
+  image instead of republishing identical content.

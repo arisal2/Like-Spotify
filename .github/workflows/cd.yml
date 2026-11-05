@@ -14,19 +14,71 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  changes:
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'master'
     runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.paths.outputs.api }}
+      web: ${{ steps.paths.outputs.web }}
+      promote: ${{ steps.paths.outputs.promote }}
+      images: ${{ steps.paths.outputs.images }}
+      matrix: ${{ steps.paths.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      - id: paths
+        name: Select images and promotion from changed paths
+        shell: bash
+        run: |
+          api=false
+          web=false
+          deploy=false
+
+          while IFS= read -r path; do
+            case "$path" in
+              backend/*)
+                api=true ;;
+              web/*)
+                web=true ;;
+              .dockerignore)
+                api=true; web=true ;;
+              deploy/*)
+                deploy=true ;;
+            esac
+          done < <(git diff --name-only HEAD^ HEAD)
+
+          images=false
+          if [ "$api" = true ] || [ "$web" = true ]; then images=true; fi
+          promote=false
+          if [ "$images" = true ] || [ "$deploy" = true ]; then promote=true; fi
+
+          include='[]'
+          if [ "$api" = true ]; then
+            include=$(jq -c '. + [{"component":"api","dockerfile":"backend/Dockerfile"}]' <<< "$include")
+          fi
+          if [ "$web" = true ]; then
+            include=$(jq -c '. + [{"component":"web","dockerfile":"web/Dockerfile"}]' <<< "$include")
+          fi
+
+          {
+            echo "api=$api"
+            echo "web=$web"
+            echo "promote=$promote"
+            echo "images=$images"
+            echo "matrix={\"include\":$include}"
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: changes
+    if: needs.changes.outputs.images == 'true'
+    runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include:
-          - component: api
-            dockerfile: backend/Dockerfile
-          - component: web
-            dockerfile: web/Dockerfile
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -57,7 +109,12 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
 
   promote:
-    needs: publish
+    needs: [changes, publish]
+    if: >-
+      always() &&
+      needs.changes.result == 'success' &&
+      needs.changes.outputs.promote == 'true' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -79,17 +136,34 @@ jobs:
         if: steps.revision.outputs.promote == 'true'
         env:
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+          API_CHANGED: ${{ needs.changes.outputs.api }}
+          WEB_CHANGED: ${{ needs.changes.outputs.web }}
         run: |
           if git ls-remote --exit-code --heads origin refs/heads/deploy/local >/dev/null; then
             git fetch origin refs/heads/deploy/local:refs/remotes/origin/deploy/local
+            previous_api=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/api$/ { getline; if ($1 == "newTag:") print $2 }')
+            previous_web=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/web$/ { getline; if ($1 == "newTag:") print $2 }')
             git switch -c deploy-local refs/remotes/origin/deploy/local
             # Keep the deployment branch history while replacing its tree with
             # the tested revision. This runs only in the disposable CI checkout.
             git read-tree --reset -u "$DEPLOY_SHA"
           else
             git switch -c deploy-local
+            previous_api="$DEPLOY_SHA"
+            previous_web="$DEPLOY_SHA"
           fi
-          sed -i "s/^    newTag: .*/    newTag: ${DEPLOY_SHA}/" deploy/k8s/gitops/kustomization.yaml
+
+          api_tag="$previous_api"
+          web_tag="$previous_web"
+          if [ "$API_CHANGED" = 'true' ]; then api_tag="$DEPLOY_SHA"; fi
+          if [ "$WEB_CHANGED" = 'true' ]; then web_tag="$DEPLOY_SHA"; fi
+          if [ -z "$api_tag" ] || [ -z "$web_tag" ]; then
+            echo 'Could not determine the previously deployed image tags.'
+            exit 1
+          fi
+
+          sed -i "/newName: .*\/api$/ { n; s/newTag: .*/newTag: ${api_tag}/; }" deploy/k8s/gitops/kustomization.yaml
+          sed -i "/newName: .*\/web$/ { n; s/newTag: .*/newTag: ${web_tag}/; }" deploy/k8s/gitops/kustomization.yaml
       - name: Validate rendered manifests
         if: steps.revision.outputs.promote == 'true'
         run: kubectl kustomize deploy/k8s/gitops > /tmp/like-spotify-gitops.yaml

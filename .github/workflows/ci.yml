@@ -7,7 +7,87 @@ on:
 permissions:
   contents: read
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.paths.outputs.backend }}
+      frontend: ${{ steps.paths.outputs.frontend }}
+      browser: ${{ steps.paths.outputs.browser }}
+      kubernetes: ${{ steps.paths.outputs.kubernetes }}
+      security: ${{ steps.paths.outputs.security }}
+      documentation: ${{ steps.paths.outputs.documentation }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: paths
+        name: Select checks from changed paths
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          backend=false
+          frontend=false
+          browser=false
+          kubernetes=false
+          security=false
+          documentation=false
+
+          if [ "$EVENT_NAME" = 'workflow_call' ]; then
+            backend=true
+            frontend=true
+            browser=true
+            kubernetes=true
+            security=true
+            documentation=true
+          else
+            if [ "$EVENT_NAME" = 'pull_request' ]; then
+              base="$PR_BASE_SHA"
+              head="$PR_HEAD_SHA"
+            else
+              base="$BEFORE_SHA"
+              head="$CURRENT_SHA"
+              if [ -z "$base" ] || [ "$base" = '0000000000000000000000000000000000000000' ]; then
+                base="${head}^"
+              fi
+            fi
+
+            while IFS= read -r path; do
+              case "$path" in
+                backend/*)
+                  backend=true; browser=true; security=true ;;
+                web/*)
+                  frontend=true; browser=true; security=true ;;
+                deploy/*)
+                  kubernetes=true; security=true ;;
+                .github/workflows/*)
+                  backend=true; frontend=true; browser=true; kubernetes=true; security=true ;;
+                .github/dependabot.yml|compose.yaml|.env.example|.dockerignore)
+                  backend=true; frontend=true; browser=true; security=true ;;
+                *.md|docs/*)
+                  documentation=true ;;
+                *)
+                  security=true ;;
+              esac
+            done < <(git diff --name-only "$base" "$head")
+          fi
+
+          {
+            echo "backend=$backend"
+            echo "frontend=$frontend"
+            echo "browser=$browser"
+            echo "kubernetes=$kubernetes"
+            echo "security=$security"
+            echo "documentation=$documentation"
+          } >> "$GITHUB_OUTPUT"
+
   backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -40,6 +120,8 @@ jobs:
           go-package: ./...
           work-dir: backend
   frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -58,6 +140,8 @@ jobs:
       - run: npm test
       - run: npm run build
   browser:
+    needs: changes
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -105,6 +189,8 @@ jobs:
       - run: docker compose down
         if: always()
   kubernetes:
+    needs: changes
+    if: needs.changes.outputs.kubernetes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -115,6 +201,8 @@ jobs:
       - run: kubectl kustomize deploy/k8s/gitops > /tmp/gitops.yaml
       - run: kubectl kustomize deploy/argocd > /tmp/argocd.yaml
   security-config:
+    needs: changes
+    if: needs.changes.outputs.security == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -127,3 +215,43 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
+
+  documentation:
+    needs: changes
+    if: needs.changes.outputs.documentation == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm install --global npm@12.2.2
+      - run: npm ci
+        working-directory: web
+      - name: Check Markdown formatting
+        run: web/node_modules/.bin/prettier --check README.md SECURITY.md docs/*.md
+
+  ci-gate:
+    if: always()
+    needs: [changes, backend, frontend, browser, kubernetes, security-config, documentation]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every selected check to pass
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          BROWSER: ${{ needs.browser.result }}
+          KUBERNETES: ${{ needs.kubernetes.result }}
+          SECURITY: ${{ needs.security-config.result }}
+          DOCUMENTATION: ${{ needs.documentation.result }}
+        run: |
+          [ "$CHANGES" = 'success' ]
+          for result in "$BACKEND" "$FRONTEND" "$BROWSER" "$KUBERNETES" "$SECURITY" "$DOCUMENTATION"; do
+            if [ "$result" != 'success' ] && [ "$result" != 'skipped' ]; then
+              echo "A selected CI job did not pass: $result"
+              exit 1
+            fi
+          done
