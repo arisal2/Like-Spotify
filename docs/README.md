@@ -2,15 +2,16 @@
 
 Use this page as the entry point for operating and changing Like.
 
-| Guide                               | Use it when you need to…                                       |
-| ----------------------------------- | -------------------------------------------------------------- |
-| [Architecture](architecture.md)     | understand components, trust boundaries, data, and AI behavior |
-| [Development](development.md)       | run services, tests, builds, and browser checks locally        |
-| [API reference](api.md)             | integrate with or debug HTTP endpoints                         |
-| [Operations](operations.md)         | inspect health, logs, backups, recovery, and rollbacks         |
-| [Argo CD](argo-cd.md)               | install the local Kubernetes and Argo CD deployment            |
-| [GitHub Actions](github-actions.md) | configure CI, promotion, and branch protection                 |
-| [Security policy](../SECURITY.md)   | report vulnerabilities and review the deployment baseline      |
+| Guide                                     | Use it when you need to…                                       |
+| ----------------------------------------- | -------------------------------------------------------------- |
+| [Product suite PRD](product-suite-prd.md) | review future product scope before roadmap and OKRs            |
+| [Architecture](architecture.md)           | understand components, trust boundaries, data, and AI behavior |
+| [Development](development.md)             | run services, tests, builds, and browser checks locally        |
+| [API reference](api.md)                   | integrate with or debug HTTP endpoints                         |
+| [Operations](operations.md)               | inspect health, logs, backups, recovery, and rollbacks         |
+| [Argo CD](argo-cd.md)                     | install the local Kubernetes and Argo CD deployment            |
+| [GitHub Actions](github-actions.md)       | configure CI, promotion, and branch protection                 |
+| [Security policy](../SECURITY.md)         | report vulnerabilities and review the deployment baseline      |
 
 ## Choose a path
 
@@ -26,3 +27,20 @@ Use this page as the entry point for operating and changing Like.
 Documentation must describe checked-in behavior. Update the relevant guide in
 the same pull request when commands, environment variables, endpoints,
 deployment behavior, or operational procedures change.
+
+## Local deployment map
+
+Use these guides in order for a new machine:
+
+1. [Development](development.md) to validate tools, tests, and manifest
+   rendering.
+2. [GitHub Actions](github-actions.md) to configure repository permissions and
+   the required branch-protection check.
+3. [Argo CD](argo-cd.md) to install the controller, create runtime secrets,
+   bootstrap the application, import media, and verify persistent endpoints.
+4. [Operations](operations.md) for routine health checks, backups, rollback,
+   and incident diagnosis.
+
+`deploy/k8s/local` is a manual pre-merge smoke-test overlay.
+`deploy/k8s/gitops` on `deploy/local` is the desired state used by Argo CD.
+Do not operate both as competing deployment methods.

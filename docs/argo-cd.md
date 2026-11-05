@@ -1,104 +1,316 @@
-# Argo CD on Docker Desktop
+# Local Kubernetes deployment with Argo CD
 
-This guide sets up the local cluster used by this repository. It exposes the
-app at `http://localhost:8080` and Argo CD at `https://localhost:8082`.
+This guide starts with an empty Docker Desktop Kubernetes cluster and ends with
+persistent URLs for the application and Argo CD—no routine port forwarding.
 
-## 1. Prepare the cluster
+| Service | URL                      |
+| ------- | ------------------------ |
+| Like    | <http://localhost:8080>  |
+| Argo CD | <https://localhost:8082> |
 
-Enable Kubernetes in Docker Desktop and confirm the context before applying
-anything:
+Argo CD reads `deploy/k8s/gitops` from `deploy/local`. GitHub Actions creates
+and updates that branch after a successful `master` build, so the cluster pulls
+a tested deployment revision instead of deploying from a developer laptop.
+
+## How deployment works
+
+```text
+pull request → CI → merge to master → CI → build changed images in GHCR
+                                               ↓
+                                      update deploy/local
+                                               ↓
+Docker Desktop cluster ← Argo CD detects and syncs the desired state
+```
+
+Docker Desktop publishes the two LoadBalancer services on the host. That is why
+the endpoints remain available without `kubectl port-forward`.
+
+## 1. Prerequisites
+
+- Docker Desktop with Kubernetes enabled.
+- `kubectl`, Git, and repository access.
+- A successful promotion so `deploy/local` and its GHCR images exist.
+- Licensed audio and artwork if media playback is required.
+
+The Argo CD CLI is optional; bootstrap uses `kubectl`.
+
+Confirm the target before changing anything:
 
 ```bash
+kubectl config get-contexts
 kubectl config use-context docker-desktop
+kubectl cluster-info
 kubectl get nodes
 ```
 
-Create the namespace and database secret outside Git. Choose your own values;
-the password in `DATABASE_DSN` must match `MYSQL_PASSWORD`.
+Stop if the current context is not `docker-desktop`.
+
+## 2. Verify the deployment branch
 
 ```bash
-kubectl create namespace like-spotify
+git ls-remote --exit-code --heads origin refs/heads/deploy/local
+git fetch origin deploy/local
+git show origin/deploy/local:deploy/k8s/gitops/kustomization.yaml
+```
+
+The image `newTag` values should be full commit SHAs, not `main`. If the branch
+does not exist, merge an application or deployment change into `master`, then
+wait for **Test and package** and **Build and promote**. Documentation-only
+merges do not promote because no runtime component changed.
+
+## 3. Install Argo CD
+
+The local setup is documented against pinned Argo CD `v3.6.0`. Review upstream
+upgrade notes before changing it.
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd --server-side --force-conflicts \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.0/manifests/install.yaml
+kubectl wait --for=condition=Available deployment/argocd-server \
+  -n argocd --timeout=300s
+kubectl get pods -n argocd
+```
+
+This official non-HA install is suitable for a single-node development cluster,
+not production. The versioned URL prevents an unexpected future upgrade.
+
+## 4. Create runtime secrets
+
+GitOps intentionally contains no credentials. Create the namespace and Secret
+before the first successful sync:
+
+```bash
+kubectl create namespace like-spotify --dry-run=client -o yaml | kubectl apply -f -
 kubectl create secret generic app-secrets -n like-spotify \
   --from-literal=MYSQL_PASSWORD='<app-password>' \
   --from-literal=MYSQL_ROOT_PASSWORD='<root-password>' \
   --from-literal=DATABASE_DSN='like_spotify:<app-password>@tcp(mysql:3306)/like_spotify?parseTime=true'
 ```
 
-Use a password that can be represented in a MySQL DSN, and avoid saving real
-values in shell history. The optional AI key and model can also be added as
-`OPENAI_API_KEY` and `OPENAI_MODEL` keys in this Secret.
+`MYSQL_PASSWORD` and the password in `DATABASE_DSN` must match. Use a DSN-safe
+password or percent-encode reserved characters. Do not commit real values or
+leave them in shared shell history.
 
-## 2. Populate media storage
+Optional AI settings can be included as `OPENAI_API_KEY` and `OPENAI_MODEL`.
+Recreate the complete Secret with `--dry-run=client -o yaml | kubectl apply -f -`
+when adding keys; do not print the existing Secret. Production deployments
+should use an encrypted or external secret workflow.
 
-The GitOps overlay creates a 1 GiB persistent volume claim named `media` and
-mounts it read-only in the API. Copy licensed files into the claim before the
-first deployment:
+## 5. Handle private GHCR packages
+
+Skip this section when the API and web packages are public. Private packages
+need a read-only GitHub package token:
 
 ```bash
-kubectl apply -n like-spotify -f deploy/k8s/gitops/media-pvc.yaml
+kubectl create secret docker-registry ghcr-pull -n like-spotify \
+  --docker-server=ghcr.io \
+  --docker-username='<github-user>' \
+  --docker-password='<read-packages-token>'
+```
+
+The current workloads do not reference `ghcr-pull` automatically. Add
+`imagePullSecrets` to the service account or pod specifications in Git and let
+the promotion workflow update `deploy/local`. Do not rely on a permanent,
+undocumented cluster-only patch.
+
+## 6. Bootstrap the Argo CD application
+
+Run from the repository root:
+
+```bash
+kubectl kustomize deploy/argocd
+kubectl apply -k deploy/argocd
+kubectl get appproject,application -n argocd
+```
+
+This installs:
+
+- `AppProject/like-spotify`, restricting source, destination, and resource
+  types.
+- `Application/like-spotify`, watching `deploy/local` at
+  `deploy/k8s/gitops` with automatic sync, pruning, and self-healing.
+- `Service/argocd-local`, publishing Argo CD on host port 8082.
+
+Wait for reconciliation:
+
+```bash
+kubectl get application like-spotify -n argocd -w
+kubectl get pods,jobs,pvc,svc -n like-spotify
+```
+
+Stop the watch after Sync is `Synced` and Health is `Healthy`. The first sync
+can take several minutes while Docker Desktop downloads images.
+
+## 7. Import media
+
+The GitOps overlay creates a `media` PVC and mounts it read-only in the API.
+After it is Bound, copy permitted media through the disposable import pod:
+
+```bash
+kubectl wait --for=jsonpath='{.status.phase}'=Bound \
+  persistentvolumeclaim/media -n like-spotify --timeout=180s
 kubectl apply -f deploy/k8s/media-import.yaml
-kubectl wait --for=condition=Ready pod/media-import -n like-spotify --timeout=180s
+kubectl wait --for=condition=Ready pod/media-import \
+  -n like-spotify --timeout=180s
 kubectl cp assets/. like-spotify/media-import:/media
 kubectl delete pod media-import -n like-spotify
 ```
 
-The expected paths are `music/` and `images/artwork/` under the claim. Refer to
-the catalog for filenames. Keep a backup outside the cluster; deleting or
-resetting Docker Desktop's cluster can destroy its local volumes.
+Expected paths are `music/` and `images/artwork/`, with filenames from
+`backend/internal/catalog/songs.json`. Keep a backup outside Docker Desktop;
+resetting its cluster can destroy local volumes.
 
-## 3. Install and connect Argo CD
+## 8. Sign in and verify
 
-Install a reviewed, pinned Argo CD release using the
-[official installation guide](https://argo-cd.readthedocs.io/en/stable/getting_started/).
-Then wait for the server and apply this repository's Argo resources:
-
-```bash
-kubectl wait --for=condition=Available deployment/argocd-server -n argocd --timeout=300s
-kubectl apply -k deploy/argocd
-kubectl get application like-spotify -n argocd
-```
-
-The application watches `deploy/local` at `deploy/k8s/gitops`. That branch is
-created by the first successful post-merge delivery workflow, so a revision
-not found message is expected until then. The Argo project restricts the
-repository, destination, and allowed resource types.
-
-## 4. Sign in and verify
-
-Open <https://localhost:8082>. The initial username is `admin`; retrieve its
-initial password from the cluster and change it after signing in:
+Open <https://localhost:8082>. The initial username is `admin`. Retrieve the
+one-time password without writing it to disk:
 
 ```bash
 kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath='{.data.password}' | base64 --decode
+printf '\n'
 ```
 
-The locally generated TLS certificate may produce a browser warning. The
-LoadBalancer services depend on Docker Desktop and can be reachable outside
-your machine depending on its network settings. Protect the admin interface.
+Change it after signing in. The local generated certificate may cause a browser
+warning.
 
-After a successful promotion, inspect the sync and rollout:
+Verify both persistent endpoints:
 
 ```bash
-kubectl get application like-spotify -n argocd
-kubectl describe application like-spotify -n argocd
-kubectl get pods,jobs,pvc,svc -n like-spotify
+kubectl get svc web-local -n like-spotify
+kubectl get svc argocd-local -n argocd
+curl --fail http://localhost:8080/health/web
+curl --fail http://localhost:8080/api/v1/catalog
 ```
 
-The application automatically syncs and self-heals, and prunes resources that
-are removed from its desired state. Keep the PVC and its backups safe. If GHCR
-packages are private, configure a registry pull secret for the API, web, and
-migration pods before syncing.
+The API is reached through the web service at `/api`; it is not independently
+published by the GitOps overlay.
 
-## 5. Troubleshooting
+## 9. Deploy future changes
 
-- **Revision not found:** confirm that the post-merge workflow created
-  `deploy/local` and that Argo CD can reach GitHub.
-- **ImagePullBackOff:** check package visibility, registry access, and pull
-  credentials.
-- **Migration fails:** inspect `kubectl get jobs -n like-spotify` and the Job
-  logs; confirm that the database secret matches the existing database.
-- **Missing music:** inspect the media claim, file paths, and catalog filenames.
-- **Application unavailable:** verify the LoadBalancer service and the API/web
-  pod readiness. A CNI must enforce NetworkPolicy for the declared rules to
-  provide isolation.
+Normal releases use GitOps, not `kubectl set image`:
+
+1. Open a feature-branch pull request to `master`.
+2. Wait for the required `ci-gate` and review, then merge.
+3. Wait for the `master` **Test and package** run.
+4. Wait for **Build and promote** to publish changed images and update
+   `deploy/local`.
+5. Watch Argo CD sync the branch revision.
+
+```bash
+kubectl get application like-spotify -n argocd -w
+kubectl rollout status deployment/api -n like-spotify --timeout=300s
+kubectl rollout status deployment/web -n like-spotify --timeout=300s
+```
+
+Unchanged components retain their immutable tags. Documentation-only changes
+publish no image and produce no cluster promotion.
+
+## Manual pre-merge smoke test
+
+This path renders and applies local manifests before a merge. It is not a
+replacement for Argo CD and uses local image names:
+
+```bash
+cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
+# Edit secrets.env; MYSQL_PASSWORD and the DSN password must match.
+kubectl apply -k deploy/k8s/local
+kubectl apply -f deploy/k8s/migration-job.yaml
+```
+
+First build images named `like-spotify-api:local` and
+`like-spotify-web:local` into Docker Desktop's image store. Never commit
+`deploy/k8s/local/secrets.env`; Git ignores it. Remove manually applied
+resources before returning to the GitOps deployment to avoid ownership
+confusion.
+
+## Upgrade Argo CD
+
+1. Read release and upgrade notes from the installed version to the target.
+2. Confirm desired configuration is in Git and data backups are current.
+3. Apply the target's pinned official install manifest.
+4. Wait for all Argo deployments and verify Like remains Synced and Healthy.
+5. Update the pinned version in this guide in the same pull request.
+
+```bash
+kubectl get deploy -n argocd
+kubectl get application like-spotify -n argocd
+```
+
+## Troubleshooting
+
+### Revision not found
+
+Confirm remote `deploy/local` exists and **Build and promote** succeeded. A
+documentation-only merge does not create a promotion.
+
+### Application is OutOfSync or Degraded
+
+```bash
+kubectl describe application like-spotify -n argocd
+kubectl get events -n like-spotify --sort-by=.lastTimestamp
+kubectl get pods,jobs -n like-spotify
+```
+
+Inspect the first failing resource rather than repeatedly forcing a sync.
+
+### ImagePullBackOff
+
+Check the exact SHA tag in `deploy/local`, GHCR visibility, node architecture,
+and configured pull credentials.
+
+### Migration failed
+
+```bash
+kubectl get jobs -n like-spotify
+kubectl logs job/migrate -n like-spotify
+kubectl describe secret app-secrets -n like-spotify
+```
+
+Do not print Secret values. Confirm that the database password and DSN agree.
+
+### Local endpoints do not open
+
+```bash
+kubectl get svc web-local -n like-spotify
+kubectl get svc argocd-local -n argocd
+kubectl describe svc web-local -n like-spotify
+```
+
+Both services should be `LoadBalancer`. If the external address stays pending,
+confirm Docker Desktop Kubernetes supports LoadBalancer services. Port
+forwarding can diagnose the service but should not be required normally.
+
+### Media is missing
+
+Confirm the `media` PVC is Bound and inspect the import pod and exact catalog
+filenames. Argo CD manages the PVC declaration, not its content.
+
+## Teardown
+
+Export database and media backups first. The Application has a resources
+finalizer, so deleting it can prune managed resources.
+
+```bash
+kubectl delete -k deploy/argocd
+kubectl delete namespace like-spotify
+kubectl delete namespace argocd
+```
+
+This can delete MySQL and media PVC data. Git and GHCR can recreate workloads,
+but cannot recreate user data or media.
+
+## Production boundary
+
+This setup is for a trusted local machine. Before internet exposure, use a
+production ingress or gateway, real DNS and TLS, secure cookies, external
+secrets, SSO and restricted Argo access, enforced network policies, monitored
+encrypted backups, and an incident-response process.
+
+## References
+
+- [Argo CD getting started](https://argo-cd.readthedocs.io/en/latest/getting_started/)
+- [Argo CD releases](https://github.com/argoproj/argo-cd/releases)
+- [GitHub Actions and GitOps setup](github-actions.md)
+- [Operations and recovery](operations.md)
