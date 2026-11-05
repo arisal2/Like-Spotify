@@ -24,8 +24,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.27.3'
           cache-dependency-path: backend/go.sum
@@ -45,8 +45,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -59,8 +59,8 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -86,7 +86,7 @@ jobs:
         working-directory: web
       - run: npm run test:e2e
         working-directory: web
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: browser-failure
@@ -98,8 +98,8 @@ jobs:
   kubernetes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-kubectl@v4
+      - uses: actions/checkout@v7
+      - uses: azure/setup-kubectl@v5
       - run: kubectl kustomize deploy/k8s/base > /tmp/base.yaml
       - run: cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
       - run: kubectl kustomize deploy/k8s/local > /tmp/local.yaml
@@ -108,7 +108,7 @@ jobs:
   security-config:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Scan repository and deployment configuration
         uses: aquasecurity/trivy-action@v0.36.0
         with:
