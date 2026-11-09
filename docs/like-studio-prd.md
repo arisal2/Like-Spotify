@@ -82,6 +82,7 @@ A creator who values deterministic generation, batch variations, asset conventio
 - Text-to-audio generation as a dependency for core workflows.
 - Direct publishing to commercial asset stores.
 - Full video scoring, notation engraving, or live performance support.
+- User-selectable visual theme packs in the Game Sound Lab MVP.
 
 ## Product structure
 
@@ -327,6 +328,30 @@ Initial supported browsers should be Chromium-based desktop browsers. Broader su
 - Shortcuts must be discoverable and avoid browser or assistive-technology conflicts.
 - Ear-training results must not be required to navigate or operate the product.
 
+## Future visual themes
+
+User-selectable theme packs are a post-MVP customization feature. Planned directions include:
+
+- **Studio Dark:** a restrained production interface optimized for long editing sessions.
+- **Retro:** hardware-sampler and arcade-inspired colors, typography, meters, and optional display texture.
+- **Cyberpunk:** high-contrast neon accents and futuristic panel styling.
+- **High Contrast:** an accessibility-focused palette with minimal decorative effects.
+- Additional community or project themes after the theme contract is stable.
+
+The foundation must use semantic design tokens and CSS custom properties now so later themes can change color, typography, spacing accents, meters, waveforms, and decorative treatment without changing component behavior or layout contracts.
+
+Theme requirements:
+
+- Theme selection persists per user and applies before meaningful paint.
+- Every theme maintains readable waveforms, automation data, focus states, meters, warnings, and disabled controls.
+- Retro scanlines, glow, flicker, animated noise, and similar effects are optional decoration and disabled by reduced-motion or reduced-transparency preferences.
+- A theme may not encode musical or editing state by color alone.
+- Theme packs contain declarative tokens and approved assets, not executable third-party code.
+- The default theme remains available as a safe fallback when a theme is incomplete or incompatible.
+- Audio output, saved projects, screenshots used for visual testing, and export rendering remain independent of the selected UI theme.
+
+Themes should be tested against representative dense screens—including the waveform editor, patch controls, sequencer, mixer, dialogs, and error states—rather than only the landing page.
+
 ## Data model
 
 The conceptual model is:
@@ -553,6 +578,12 @@ Deferral is not rejection. Each tool should enter through an explicit requiremen
 
 - Add state-based music transitions and engine manifests.
 - Introduce approved AI assistants only after deterministic workflows are stable.
+
+### Phase 6: Customization and theme packs
+
+- Deliver Studio Dark, Retro, Cyberpunk, and High Contrast themes using the stable semantic-token contract.
+- Add per-user theme persistence, pre-paint application, visual regression coverage, and accessibility validation.
+- Document a constrained theme-pack format before accepting community themes.
 
 ## MVP acceptance criteria
 
