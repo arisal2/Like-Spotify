@@ -16,6 +16,15 @@ the Producer records approval, rejection, or a replacement direction.
 | DEC-009 | Pending  | AI availability          | Optional and disabled by default until privacy/provider requirements are approved        | —                                                           |
 | DEC-010 | Proposed | Future visual themes     | Build semantic tokens early; ship Studio Dark, Retro, Cyberpunk, and High Contrast later | User requested themes later; exact phase remains reviewable |
 
+## Prototype evidence for DEC-003 and DEC-004
+
+The first Sound Lab spike validates that one managed native `AudioContext` can
+preview a versioned oscillator/envelope patch and that `OfflineAudioContext`
+can render the same scheduling path to mono 44.1 kHz PCM for 16-bit WAV
+encoding. This is implementation evidence, not Producer approval of the
+pending format and rendering decisions. OGG, FFmpeg workers, imported samples,
+and canonical server rendering remain outside this prototype.
+
 ## Decision record template
 
 ```markdown
