@@ -368,6 +368,138 @@ Go API
 
 The current web and API deployments remain the initial boundaries. Introduce a render worker only when server-side encoding, analysis, or batch workloads justify independent scaling. Do not split Theory, Compose, Sound Lab, and Library into separate network services by default.
 
+## Recommended tools and technology
+
+The Studio should add a small number of audio-focused tools while retaining the current application stack. Audio libraries must sit behind project-owned interfaces so patches and projects are not permanently coupled to one dependency's object model.
+
+### Browser audio and music
+
+| Need                                                                 | Recommended tool                                | How we should use it                                                                                                                                                                                      |
+| -------------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core audio graph and preview                                         | Web Audio API                                   | Treat `AudioContext`, audio nodes, and scheduled `AudioParam` changes as the platform foundation. Keep one managed context per page.                                                                      |
+| Custom real-time DSP                                                 | `AudioWorklet`                                  | Use for DSP that built-in nodes cannot provide. Do not use deprecated `ScriptProcessorNode`. Keep UI and network work outside the audio thread.                                                           |
+| Deterministic offline rendering                                      | `OfflineAudioContext`                           | Render Web Audio graphs faster than real time into an `AudioBuffer`; record renderer version, parameters, sample rate, and seed.                                                                          |
+| Musical clock, sequencing, synth building blocks, and common effects | Tone.js                                         | Use initially for transport, tempo-relative scheduling, envelopes, oscillators, instruments, and effects. Wrap it in a Studio audio-engine adapter rather than storing Tone objects in project documents. |
+| Waveform display and editable regions                                | wavesurfer.js with Regions and Timeline plugins | Use for visualization, selection, markers, and loop-region interaction. Project edit data remains the source of truth. Supply precomputed peaks for large assets.                                         |
+| Heavy non-real-time browser work                                     | Web Workers                                     | Run peak generation, WAV serialization, analysis, and archive preparation outside the React/UI thread. Workers must be cancellable.                                                                       |
+| MIDI controller input                                                | Web MIDI API                                    | Add during Theory/Compose behind capability detection, explicit permission, and keyboard-accessible alternatives.                                                                                         |
+
+Tone.js accelerates the MVP, but native Web Audio remains the architectural boundary. If Tone.js cannot reproduce an important graph consistently in offline rendering, that graph should move to project-owned Web Audio or AudioWorklet DSP rather than changing the saved project format.
+
+### Rendering, encoding, and analysis
+
+| Need                                            | Recommended tool                                             | How we should use it                                                                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| First PCM export                                | Small project-owned WAV encoder                              | Serialize an offline-rendered `AudioBuffer` to PCM WAV in a worker. WAV is simple enough that the MVP should not add a large browser codec bundle for it.  |
+| Canonical OGG encoding, probing, and validation | Pinned FFmpeg container                                      | Run FFmpeg as an isolated, non-root, resource-limited job. Pass validated argument arrays without a shell. Use `ffprobe` output to verify format metadata. |
+| Peak, loudness, clipping, and loop validation   | Project-owned analysis module; FFmpeg where appropriate      | Keep simple peak/RMS calculations deterministic and testable. Add standardized loudness measurement only when its product target is defined.               |
+| ZIP bundles                                     | A small maintained ZIP library in a Web Worker or render job | Stream files where possible and enforce total output limits. Do not retain duplicate temporary bundles indefinitely.                                       |
+| Future musical/audio analysis                   | Evaluate Essentia.js behind an adapter                       | Consider only after BPM, key, or feature-extraction accuracy is benchmarked against representative game audio. It is not needed for the Sound Lab MVP.     |
+
+The first preview and PCM render can remain in the browser. Introduce the FFmpeg render worker with OGG export or earlier if browser output differs across supported machines. The worker is a queue consumer, not a public API: the Go API authorizes a render request, stores a job, and exposes status and signed/authorized results.
+
+### Application and data stack
+
+| Area                  | Tool or approach                                                                          | Decision                                                                                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI                    | React, TypeScript, Vite                                                                   | Continue the existing stack. Split Studio routes and editor components by capability rather than creating another frontend.                                   |
+| Server state          | TanStack Query                                                                            | Continue using it for projects, assets, revisions, jobs, and exports. Audio playback/edit state does not belong in the query cache.                           |
+| Runtime validation    | Zod in the browser and strict Go decoding on the API                                      | Version project documents and validate every imported document or manifest. Generate fixtures from shared examples where practical.                           |
+| Editor state and undo | Project-owned command model with immutable snapshots                                      | Start without a global-state dependency. Add a focused state library only after the editor model and performance needs are measured.                          |
+| API                   | Go `net/http`                                                                             | Extend the current versioned API with projects, assets, upload sessions, revisions, render jobs, and exports. Keep authorization at every ownership boundary. |
+| Metadata              | MySQL migrations                                                                          | Store users, projects, asset metadata, patch revisions, job state, provenance, and export records—not large audio blobs.                                      |
+| Binary storage        | Storage interface backed initially by the existing filesystem/PVC                         | Define `Put`, `Open`, `Stat`, and `Delete` semantics plus content hashes. Add S3-compatible storage later without changing domain APIs.                       |
+| Background jobs       | MySQL-backed job table and separate Go worker process when required                       | Begin with one worker deployment and bounded concurrency. Do not add Kafka, RabbitMQ, or Redis for the MVP.                                                   |
+| API contracts         | OpenAPI generated from or checked against implementation after Studio endpoints stabilize | Keep Zod and Go behavior tested immediately; add contract generation before external engine integrations depend on the API.                                   |
+
+### Testing and quality tools
+
+| Test layer                 | Tools and coverage                                                                                                                                                    |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pure DSP and project rules | Vitest for envelopes, parameter bounds, seed behavior, naming, edit commands, manifests, and WAV serialization.                                                       |
+| Browser audio integration  | Playwright in Chromium using generated impulses, tones, and noise. Verify decoded duration, peaks, loop boundaries, and user journeys.                                |
+| Audio regression           | Deterministic rendered PCM fixtures compared by numeric tolerance and selected signal features, not only byte hashes. Store only small disposable/generated fixtures. |
+| API and persistence        | Existing Go unit/integration tests with MySQL for ownership, revision conflicts, quotas, job transitions, and recovery.                                               |
+| Export validation          | `ffprobe` plus automated checks for filenames, manifest/file agreement, sample rate, channels, duration, loop points, and clipping.                                   |
+| Security                   | Existing secret, dependency, source, container, and Kubernetes scans plus malicious media/project fixtures and resource-exhaustion tests.                             |
+| Engine integration         | A minimal versioned Godot sample project exercised against exported bundles in CI where practical.                                                                    |
+| Performance                | Browser performance marks around preview start, waveform load, autosave, offline render, and export; server metrics around upload and job queues.                     |
+
+Testing should prefer generated audio with known mathematical properties. Copyrighted or opaque binary fixtures must not enter Git.
+
+### Product and design tools
+
+- Use Storybook only when shared editor controls become numerous enough to justify a separate component workbench; it is not required for the first prototype.
+- Use Figma or repository-native wireframes for piano roll, waveform, patch, and export interaction review before implementing dense editor screens.
+- Use Architecture Decision Records under `docs/decisions/` for renderer ownership, saved patch schema, object storage, and job queue decisions.
+- Publish the JSON export manifest as a versioned JSON Schema so Godot, Unity, and Unreal examples can validate it independently.
+
+## Existing capabilities we can leverage now
+
+The current codebase already solves meaningful platform work. Studio development should extend these assets instead of restarting the product.
+
+### Existing browser foundation
+
+- React, TypeScript, Vite, routing, and responsive application structure.
+- A working `HTMLAudioElement` player with play/pause, seek, queue, repeat, shuffle, volume, and session restoration behavior.
+- TanStack Query for server state and Zod for response validation.
+- Account-aware library, playlist, history, mixes, and recommendation interfaces.
+- Vitest component/hook tests and Playwright critical-journey tests.
+- A deterministic generated WAV fixture that can become the basis for broader audio tests.
+
+The current player should continue handling ordinary music playback. Studio preview needs a separate managed Web Audio engine; replacing the player wholesale would create unnecessary regression risk.
+
+### Existing API and data foundation
+
+- Go API with strict JSON input, request limits, structured logs, and request IDs.
+- Persistent cookie sessions, bcrypt password hashing, CSRF protection, origin checks, ownership enforcement, and rate limits.
+- MySQL migrations and integration tests that exercise real persistence and session recovery.
+- A narrow media-serving allowlist that can inform authorized asset-download handlers.
+- Local and optional AI recommendation adapters that demonstrate provider isolation and validated output.
+- Liveness and readiness endpoints suitable for additional worker and storage checks.
+
+The static catalog is not sufficient for Studio projects, but its separation from the filesystem provides a useful migration boundary toward database-owned asset metadata.
+
+### Existing delivery and operations foundation
+
+- Non-root, read-only containers with dropped capabilities and resource limits.
+- Docker Compose for local development and disposable testing.
+- Kubernetes manifests with health probes, restricted security contexts, service accounts, persistent claims, and network policies.
+- Change-aware GitHub Actions for Go, frontend, browser, manifest, security, and image checks.
+- Multi-architecture image publishing with immutable commit tags.
+- Argo CD reconciliation through the automation-owned `deploy/local` branch.
+- Local persistent application and Argo CD endpoints without routine port forwarding.
+- Documentation for secrets, media import, backup, rollback, troubleshooting, and cluster recovery.
+
+The first Studio milestone can therefore focus on audio and project behavior. It does not need to redesign authentication, deployment, container security, or GitOps.
+
+### What needs extension rather than replacement
+
+| Current capability            | Studio extension                                                                                   |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Static catalog                | User-owned asset metadata, tags, provenance, derived revisions, and project usage.                 |
+| Read-only media directory/PVC | Authorized upload flow and a storage interface supporting sources, previews, renders, and exports. |
+| `HTMLAudioElement` player     | Web Audio preview engine for synthesis, regions, precise scheduling, and A/B audition.             |
+| Playlists and saved mixes     | Projects, patterns, patch revisions, variation groups, and export bundles.                         |
+| Synchronous API requests      | Bounded background jobs with progress, cancellation, retries, and idempotency.                     |
+| Disposable WAV E2E fixture    | Generated DSP fixtures, render tolerances, export probing, and golden signal tests.                |
+| One API/web deployment        | Optional render-worker deployment only when encoding or batch workloads require it.                |
+
+### Tools deliberately deferred
+
+Do not add these until a measured need exists:
+
+- A microservice per Studio area.
+- Kafka, RabbitMQ, Redis, or a workflow orchestrator.
+- WebAssembly codec bundles duplicating the canonical FFmpeg worker.
+- Collaborative-document infrastructure such as CRDTs.
+- Third-party plugin hosting.
+- A custom database, time-series database, or search cluster.
+- Native desktop wrappers.
+- GPU infrastructure or self-hosted generative-audio models.
+
+Deferral is not rejection. Each tool should enter through an explicit requirement, benchmark, and architecture decision rather than anticipation.
+
 ### Storage
 
 - Original uploads and imports are immutable.
@@ -489,3 +621,11 @@ Approve the PRD when reviewers agree on:
 - Reproducibility, provenance, storage, security, and accessibility requirements.
 - The staged sequence: Foundation → Sound Lab → Theory/Sequencer → Composition → Adaptive Audio/AI.
 - The open decisions that must be resolved before estimates and OKRs.
+
+## Technical references
+
+- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+- [Web Audio specification](https://www.w3.org/TR/webaudio-1.0/)
+- [Tone.js documentation](https://tonejs.github.io/)
+- [wavesurfer.js documentation](https://wavesurfer.pages.dev/)
+- [FFmpeg documentation](https://www.ffmpeg.org/documentation.html)
