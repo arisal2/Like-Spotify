@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"bedlam-like-music/backend/internal/recommend"
+	"bedlam-like-music/backend/internal/store"
 	"github.com/go-sql-driver/mysql"
-	"like-spotify/backend/internal/recommend"
-	"like-spotify/backend/internal/store"
 )
 
 // This suite creates and drops its own database; it never clears an app database.

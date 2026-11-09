@@ -3,10 +3,10 @@
 This guide starts with an empty Docker Desktop Kubernetes cluster and ends with
 persistent URLs for the application and Argo CD—no routine port forwarding.
 
-| Service | URL                      |
-| ------- | ------------------------ |
-| Like    | <http://localhost:8080>  |
-| Argo CD | <https://localhost:8082> |
+| Service           | URL                      |
+| ----------------- | ------------------------ |
+| Bedlam-Like-Music | <http://localhost:8080>  |
+| Argo CD           | <https://localhost:8082> |
 
 Argo CD reads `deploy/k8s/gitops` from `deploy/local`. GitHub Actions creates
 and updates that branch after a successful `master` build, so the cluster pulls
@@ -81,11 +81,11 @@ GitOps intentionally contains no credentials. Create the namespace and Secret
 before the first successful sync:
 
 ```bash
-kubectl create namespace like-spotify --dry-run=client -o yaml | kubectl apply -f -
-kubectl create secret generic app-secrets -n like-spotify \
+kubectl create namespace bedlam-like-music --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic app-secrets -n bedlam-like-music \
   --from-literal=MYSQL_PASSWORD='<app-password>' \
   --from-literal=MYSQL_ROOT_PASSWORD='<root-password>' \
-  --from-literal=DATABASE_DSN='like_spotify:<app-password>@tcp(mysql:3306)/like_spotify?parseTime=true'
+  --from-literal=DATABASE_DSN='bedlam_like_music:<app-password>@tcp(mysql:3306)/bedlam_like_music?parseTime=true'
 ```
 
 `MYSQL_PASSWORD` and the password in `DATABASE_DSN` must match. Use a DSN-safe
@@ -103,7 +103,7 @@ Skip this section when the API and web packages are public. Private packages
 need a read-only GitHub package token:
 
 ```bash
-kubectl create secret docker-registry ghcr-pull -n like-spotify \
+kubectl create secret docker-registry ghcr-pull -n bedlam-like-music \
   --docker-server=ghcr.io \
   --docker-username='<github-user>' \
   --docker-password='<read-packages-token>'
@@ -126,17 +126,17 @@ kubectl get appproject,application -n argocd
 
 This installs:
 
-- `AppProject/like-spotify`, restricting source, destination, and resource
+- `AppProject/bedlam-like-music`, restricting source, destination, and resource
   types.
-- `Application/like-spotify`, watching `deploy/local` at
+- `Application/bedlam-like-music`, watching `deploy/local` at
   `deploy/k8s/gitops` with automatic sync, pruning, and self-healing.
 - `Service/argocd-local`, publishing Argo CD on host port 8082.
 
 Wait for reconciliation:
 
 ```bash
-kubectl get application like-spotify -n argocd -w
-kubectl get pods,jobs,pvc,svc -n like-spotify
+kubectl get application bedlam-like-music -n argocd -w
+kubectl get pods,jobs,pvc,svc -n bedlam-like-music
 ```
 
 Stop the watch after Sync is `Synced` and Health is `Healthy`. The first sync
@@ -149,12 +149,12 @@ After it is Bound, copy permitted media through the disposable import pod:
 
 ```bash
 kubectl wait --for=jsonpath='{.status.phase}'=Bound \
-  persistentvolumeclaim/media -n like-spotify --timeout=180s
+  persistentvolumeclaim/media -n bedlam-like-music --timeout=180s
 kubectl apply -f deploy/k8s/media-import.yaml
 kubectl wait --for=condition=Ready pod/media-import \
-  -n like-spotify --timeout=180s
-kubectl cp assets/. like-spotify/media-import:/media
-kubectl delete pod media-import -n like-spotify
+  -n bedlam-like-music --timeout=180s
+kubectl cp assets/. bedlam-like-music/media-import:/media
+kubectl delete pod media-import -n bedlam-like-music
 ```
 
 Expected paths are `music/` and `images/artwork/`, with filenames from
@@ -178,7 +178,7 @@ warning.
 Verify both persistent endpoints:
 
 ```bash
-kubectl get svc web-local -n like-spotify
+kubectl get svc web-local -n bedlam-like-music
 kubectl get svc argocd-local -n argocd
 curl --fail http://localhost:8080/health/web
 curl --fail http://localhost:8080/api/v1/catalog
@@ -199,9 +199,9 @@ Normal releases use GitOps, not `kubectl set image`:
 5. Watch Argo CD sync the branch revision.
 
 ```bash
-kubectl get application like-spotify -n argocd -w
-kubectl rollout status deployment/api -n like-spotify --timeout=300s
-kubectl rollout status deployment/web -n like-spotify --timeout=300s
+kubectl get application bedlam-like-music -n argocd -w
+kubectl rollout status deployment/api -n bedlam-like-music --timeout=300s
+kubectl rollout status deployment/web -n bedlam-like-music --timeout=300s
 ```
 
 Unchanged components retain their immutable tags. Documentation-only changes
@@ -219,8 +219,8 @@ kubectl apply -k deploy/k8s/local
 kubectl apply -f deploy/k8s/migration-job.yaml
 ```
 
-First build images named `like-spotify-api:local` and
-`like-spotify-web:local` into Docker Desktop's image store. Never commit
+First build images named `bedlam-like-music-api:local` and
+`bedlam-like-music-web:local` into Docker Desktop's image store. Never commit
 `deploy/k8s/local/secrets.env`; Git ignores it. Remove manually applied
 resources before returning to the GitOps deployment to avoid ownership
 confusion.
@@ -230,12 +230,12 @@ confusion.
 1. Read release and upgrade notes from the installed version to the target.
 2. Confirm desired configuration is in Git and data backups are current.
 3. Apply the target's pinned official install manifest.
-4. Wait for all Argo deployments and verify Like remains Synced and Healthy.
+4. Wait for all Argo deployments and verify Bedlam-Like-Music remains Synced and Healthy.
 5. Update the pinned version in this guide in the same pull request.
 
 ```bash
 kubectl get deploy -n argocd
-kubectl get application like-spotify -n argocd
+kubectl get application bedlam-like-music -n argocd
 ```
 
 ## Troubleshooting
@@ -248,9 +248,9 @@ documentation-only merge does not create a promotion.
 ### Application is OutOfSync or Degraded
 
 ```bash
-kubectl describe application like-spotify -n argocd
-kubectl get events -n like-spotify --sort-by=.lastTimestamp
-kubectl get pods,jobs -n like-spotify
+kubectl describe application bedlam-like-music -n argocd
+kubectl get events -n bedlam-like-music --sort-by=.lastTimestamp
+kubectl get pods,jobs -n bedlam-like-music
 ```
 
 Inspect the first failing resource rather than repeatedly forcing a sync.
@@ -263,9 +263,9 @@ and configured pull credentials.
 ### Migration failed
 
 ```bash
-kubectl get jobs -n like-spotify
-kubectl logs job/migrate -n like-spotify
-kubectl describe secret app-secrets -n like-spotify
+kubectl get jobs -n bedlam-like-music
+kubectl logs job/migrate -n bedlam-like-music
+kubectl describe secret app-secrets -n bedlam-like-music
 ```
 
 Do not print Secret values. Confirm that the database password and DSN agree.
@@ -273,9 +273,9 @@ Do not print Secret values. Confirm that the database password and DSN agree.
 ### Local endpoints do not open
 
 ```bash
-kubectl get svc web-local -n like-spotify
+kubectl get svc web-local -n bedlam-like-music
 kubectl get svc argocd-local -n argocd
-kubectl describe svc web-local -n like-spotify
+kubectl describe svc web-local -n bedlam-like-music
 ```
 
 Both services should be `LoadBalancer`. If the external address stays pending,
@@ -294,7 +294,7 @@ finalizer, so deleting it can prune managed resources.
 
 ```bash
 kubectl delete -k deploy/argocd
-kubectl delete namespace like-spotify
+kubectl delete namespace bedlam-like-music
 kubectl delete namespace argocd
 ```
 

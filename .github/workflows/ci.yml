@@ -168,7 +168,7 @@ jobs:
       mysql:
         image: mysql:8.4
         env:
-          MYSQL_DATABASE: like_spotify
+          MYSQL_DATABASE: bedlam_like_music
           MYSQL_ROOT_PASSWORD: ci-test-password
           MYSQL_ROOT_HOST: '%'
         ports:
@@ -197,26 +197,26 @@ jobs:
       - name: Build and migrate API
         working-directory: backend
         env:
-          DATABASE_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/like_spotify?parseTime=true'
+          DATABASE_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/bedlam_like_music?parseTime=true'
         run: |
-          go build -o /tmp/like-spotify-api ./cmd/server
-          /tmp/like-spotify-api migrate
+          go build -o /tmp/bedlam-like-music-api ./cmd/server
+          /tmp/bedlam-like-music-api migrate
       - name: Start API and Vite
         env:
-          DATABASE_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/like_spotify?parseTime=true'
+          DATABASE_DSN: 'root:ci-test-password@tcp(127.0.0.1:3306)/bedlam_like_music?parseTime=true'
           APP_ORIGIN: 'http://127.0.0.1:5173'
           MEDIA_DIR: ${{ github.workspace }}/assets
         run: |
-          /tmp/like-spotify-api >/tmp/like-api.log 2>&1 &
-          echo $! >/tmp/like-api.pid
-          (cd web && npm run dev >/tmp/like-web.log 2>&1 & echo $! >/tmp/like-web.pid)
+          /tmp/bedlam-like-music-api >/tmp/bedlam-like-music-api.log 2>&1 &
+          echo $! >/tmp/bedlam-like-music-api.pid
+          (cd web && npm run dev >/tmp/bedlam-like-music-web.log 2>&1 & echo $! >/tmp/bedlam-like-music-web.pid)
       - name: Wait for application
         run: |
           for attempt in $(seq 1 60); do
             if curl --fail http://127.0.0.1:5173/api/v1/catalog >/dev/null; then exit 0; fi
             sleep 1
           done
-          cat /tmp/like-api.log /tmp/like-web.log
+          cat /tmp/bedlam-like-music-api.log /tmp/bedlam-like-music-web.log
           exit 1
       - name: Cache Playwright browser
         uses: actions/cache@v6
@@ -237,12 +237,12 @@ jobs:
           path: web/test-results
       - name: Show service logs
         if: failure()
-        run: cat /tmp/like-api.log /tmp/like-web.log
+        run: cat /tmp/bedlam-like-music-api.log /tmp/bedlam-like-music-web.log
       - name: Stop test services
         if: always()
         run: |
-          if [ -f /tmp/like-api.pid ]; then kill "$(cat /tmp/like-api.pid)" || true; fi
-          if [ -f /tmp/like-web.pid ]; then kill "$(cat /tmp/like-web.pid)" || true; fi
+          if [ -f /tmp/bedlam-like-music-api.pid ]; then kill "$(cat /tmp/bedlam-like-music-api.pid)" || true; fi
+          if [ -f /tmp/bedlam-like-music-web.pid ]; then kill "$(cat /tmp/bedlam-like-music-web.pid)" || true; fi
 
   containers:
     needs: changes
@@ -258,7 +258,7 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: false
-          tags: like-spotify-${{ matrix.component }}:ci
+          tags: bedlam-like-music-${{ matrix.component }}:ci
           cache-from: type=gha,scope=ci-${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=ci-${{ matrix.component }}
 

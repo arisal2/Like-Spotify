@@ -4,7 +4,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: migrate-v1
-  namespace: like-spotify
+  namespace: bedlam-like-music
 spec:
   backoffLimit: 3
   activeDeadlineSeconds: 180
@@ -22,7 +22,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: migrate
-          image: like-spotify-api:local
+          image: bedlam-like-music-api:local
           imagePullPolicy: IfNotPresent
           args: ['migrate']
           env:

@@ -1,17 +1,18 @@
 # Documentation
 
-Use this page as the entry point for operating and changing Like.
+Use this page as the entry point for operating and changing Bedlam-Like-Music.
 
-| Guide                                     | Use it when you need to…                                       |
-| ----------------------------------------- | -------------------------------------------------------------- |
-| [Product suite PRD](product-suite-prd.md) | review future product scope before roadmap and OKRs            |
-| [Architecture](architecture.md)           | understand components, trust boundaries, data, and AI behavior |
-| [Development](development.md)             | run services, tests, builds, and browser checks locally        |
-| [API reference](api.md)                   | integrate with or debug HTTP endpoints                         |
-| [Operations](operations.md)               | inspect health, logs, backups, recovery, and rollbacks         |
-| [Argo CD](argo-cd.md)                     | install the local Kubernetes and Argo CD deployment            |
-| [GitHub Actions](github-actions.md)       | configure CI, promotion, and branch protection                 |
-| [Security policy](../SECURITY.md)         | report vulnerabilities and review the deployment baseline      |
+| Guide                                                    | Use it when you need to…                                       |
+| -------------------------------------------------------- | -------------------------------------------------------------- |
+| [Bedlam-Like-Music Studio PRD](bedlam-like-music-prd.md) | review future product scope before roadmap and OKRs            |
+| [Project management](project/README.md)                  | review roles, tasks, status, and Producer decisions            |
+| [Architecture](architecture.md)                          | understand components, trust boundaries, data, and AI behavior |
+| [Development](development.md)                            | run services, tests, builds, and browser checks locally        |
+| [API reference](api.md)                                  | integrate with or debug HTTP endpoints                         |
+| [Operations](operations.md)                              | inspect health, logs, backups, recovery, and rollbacks         |
+| [Argo CD](argo-cd.md)                                    | install the local Kubernetes and Argo CD deployment            |
+| [GitHub Actions](github-actions.md)                      | configure CI, promotion, and branch protection                 |
+| [Security policy](../SECURITY.md)                        | report vulnerabilities and review the deployment baseline      |
 
 ## Choose a path
 

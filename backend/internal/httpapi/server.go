@@ -19,10 +19,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"bedlam-like-music/backend/internal/catalog"
+	"bedlam-like-music/backend/internal/recommend"
+	"bedlam-like-music/backend/internal/store"
 	"golang.org/x/crypto/bcrypt"
-	"like-spotify/backend/internal/catalog"
-	"like-spotify/backend/internal/recommend"
-	"like-spotify/backend/internal/store"
 )
 
 type Config struct {
@@ -165,7 +165,7 @@ func randomToken() string {
 	return hex.EncodeToString(b[:])
 }
 func (s *Server) getSession(r *http.Request) (store.Session, error) {
-	c, err := r.Cookie("ls_session")
+	c, err := r.Cookie("blm_session")
 	if err != nil {
 		return store.Session{}, store.ErrNotFound
 	}
@@ -284,7 +284,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	s.startSession(w, r, u, 200)
 }
 func (s *Server) startSession(w http.ResponseWriter, r *http.Request, u store.User, status int) {
-	if c, err := r.Cookie("ls_session"); err == nil {
+	if c, err := r.Cookie("blm_session"); err == nil {
 		if err := s.repo.DeleteSession(r.Context(), c.Value); err != nil {
 			s.internal(w, err)
 			return
@@ -296,16 +296,16 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, u store.Us
 		s.internal(w, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "ls_session", Value: token, Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteStrictMode, MaxAge: 604800, Expires: expires})
+	http.SetCookie(w, &http.Cookie{Name: "blm_session", Value: token, Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteStrictMode, MaxAge: 604800, Expires: expires})
 	write(w, status, map[string]any{"user": u, "csrfToken": csrf})
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	c, _ := r.Cookie("ls_session")
+	c, _ := r.Cookie("blm_session")
 	if err := s.repo.DeleteSession(r.Context(), c.Value); err != nil {
 		s.internal(w, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "ls_session", Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "blm_session", Path: "/", HttpOnly: true, Secure: s.config.SecureCookies, SameSite: http.SameSiteStrictMode, MaxAge: -1})
 	w.WriteHeader(204)
 }
 func (s *Server) playlists(w http.ResponseWriter, r *http.Request) {

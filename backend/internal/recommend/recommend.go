@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"like-spotify/backend/internal/catalog"
+	"bedlam-like-music/backend/internal/catalog"
 )
 
 type Mix struct {

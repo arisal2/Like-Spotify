@@ -1,4 +1,4 @@
-module like-spotify/backend
+module bedlam-like-music/backend
 
 go 1.27.0
 

@@ -1,6 +1,6 @@
-# Like
+# Bedlam-Like-Music
 
-Like is a self-hosted music application built with Go, React, TypeScript, MySQL,
+Bedlam-Like-Music is a self-hosted music application built with Go, React, TypeScript, MySQL,
 Docker, and Kubernetes. It provides browser playback, accounts, likes,
 playlists, listening-history controls, and mood-based mixes without committing
 copyrighted media or secrets to Git.
@@ -124,7 +124,7 @@ result, private-GHCR notes, troubleshooting, upgrades, and teardown.
 
 ## Documentation
 
-- [Product suite PRD](docs/product-suite-prd.md)
+- [Bedlam-Like-Music Studio PRD](docs/bedlam-like-music-prd.md)
 - [Documentation index](docs/README.md)
 - [Architecture and design](docs/architecture.md)
 - [Development and testing](docs/development.md)

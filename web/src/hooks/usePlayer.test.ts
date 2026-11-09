@@ -105,7 +105,7 @@ describe("audio player", () => {
   });
   it("restores a validated queue without autoplaying", async () => {
     localStorage.setItem(
-      "like.playback.v1.user.7",
+      "bedlam-like-music.playback.v1.user.7",
       JSON.stringify({
         queueIDs: [2, 999, 1],
         originalIDs: [1, 2, 999],
@@ -128,7 +128,7 @@ describe("audio player", () => {
   });
   it("separates playback state by signed-in user", async () => {
     localStorage.setItem(
-      "like.playback.v1.user.1",
+      "bedlam-like-music.playback.v1.user.1",
       JSON.stringify({
         queueIDs: [1],
         originalIDs: [1],
@@ -159,7 +159,7 @@ describe("audio player", () => {
     });
     await waitFor(() => {
       const saved = JSON.parse(
-        localStorage.getItem("like.playback.v1.user.3") ?? "null",
+        localStorage.getItem("bedlam-like-music.playback.v1.user.3") ?? "null",
       );
       expect(saved).toMatchObject({
         queueIDs: [1, 2, 3],
