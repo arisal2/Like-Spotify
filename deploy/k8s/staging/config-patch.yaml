@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_ORIGIN: https://staging.music.example.com
+  COOKIE_SECURE: 'true'
+  APP_ENV: staging

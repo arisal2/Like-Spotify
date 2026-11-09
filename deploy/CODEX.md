@@ -7,6 +7,9 @@ Read the repository-root `CODEX.md` first.
 - `deploy/k8s/local` is a manual pre-merge smoke-test overlay.
 - `deploy/k8s/gitops` on the automation-owned `deploy/local` branch is the
   desired state reconciled by Argo CD.
+- `deploy/staging` is promoted automatically from tested `master`; production
+  promotion copies an explicitly approved `deploy/staging` state to the
+  protected `deploy/production` branch without rebuilding images.
 - CI publishes immutable images; Argo CD deploys declared state. Do not make
   long-lived manual cluster patches.
 

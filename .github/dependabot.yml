@@ -6,21 +6,24 @@ updates:
       interval: weekly
     groups:
       go-dependencies:
-        patterns: ['*']
+        patterns: ["*"]
+    open-pull-requests-limit: 10
   - package-ecosystem: npm
     directory: /web
     schedule:
       interval: weekly
     groups:
       frontend-dependencies:
-        patterns: ['*']
+        patterns: ["*"]
+    open-pull-requests-limit: 10
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     groups:
       github-actions:
-        patterns: ['*']
+        patterns: ["*"]
+    open-pull-requests-limit: 10
   - package-ecosystem: docker
     directory: /backend
     schedule:

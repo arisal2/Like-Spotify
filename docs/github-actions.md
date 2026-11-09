@@ -66,8 +66,17 @@ After a successful **push** run on `master`, `Build and promote` examines the
 merged commit. It publishes only changed API or web images for AMD64 and ARM64.
 Changed images receive an immutable commit-SHA tag; unchanged components keep
 their previously deployed immutable tag. Deployment-only changes update
-`deploy/local` without rebuilding images, while documentation-only changes do
-not publish or promote anything.
+`deploy/local` and `deploy/staging` without rebuilding images, while
+documentation-only changes do not publish or promote anything.
+
+Production promotion is deliberately separate. The manually dispatched
+`Promote production` workflow requires approval through the GitHub
+`production` Environment and copies the exact image set from a pinned
+`deploy/staging` commit. See [Staging and production delivery](deployment-environments.md).
+
+Pull requests also run GitHub dependency review. It blocks newly introduced
+High or Critical vulnerable dependencies; npm audit, `govulncheck`, Trivy, and
+Dependabot alerts cover the existing dependency graph.
 
 Argo CD watches only `deploy/local`. A stale run checks the current `master`
 tip before promotion, and promotion pushes normally without a force update.
