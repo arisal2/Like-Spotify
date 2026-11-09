@@ -96,6 +96,11 @@ Pull requests run GitHub dependency review and block newly introduced High or
 Critical vulnerabilities. Existing code is also checked by npm audit,
 `govulncheck`, Trivy, and Dependabot alerts.
 
+The license review has package-specific exceptions for the official
+`actions/checkout` and `azure/setup-kubectl` actions because the dependency
+graph currently reports their metadata as unknown. Both upstream projects
+declare MIT licenses; do not broaden these exceptions to other packages.
+
 The November 2026 review found `GO-2026-5932` in `golang.org/x/crypto`. The
 application did not call the vulnerable packages, but the module was upgraded
 to the first fixed revision so the alert can close without an ignore rule.

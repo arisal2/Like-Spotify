@@ -169,10 +169,15 @@ jobs:
       pull-requests: write
     steps:
       - name: Block newly introduced vulnerable dependencies
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
+          # GitHub's dependency graph currently misses the MIT metadata for
+          # these two official actions. Keep this exception package-specific.
+          allow-dependencies-licenses: >-
+            pkg:githubactions/actions/checkout,
+            pkg:githubactions/azure/setup-kubectl
   browser:
     needs: changes
     if: needs.changes.outputs.browser == 'true'
