@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
+  AudioWaveform,
   Disc3,
   Headphones,
   Heart,
@@ -31,6 +32,7 @@ import { formatTime } from "./lib/queue";
 import { usePlayer } from "./hooks/usePlayer";
 import { Player } from "./components/Player";
 import { Modal } from "./components/Modal";
+import { SoundLab } from "./components/SoundLab";
 
 export function App() {
   const client = useQueryClient();
@@ -109,6 +111,7 @@ export function App() {
   const album = songs.find((song) => song.albumId === albumID);
   const isLikes = location.pathname === "/likes";
   const isSearch = location.pathname === "/search";
+  const isSoundLab = location.pathname === "/studio/sound-lab";
   const albums = [
     ...new Map(songs.map((song) => [song.albumId, song])).values(),
   ];
@@ -207,6 +210,10 @@ export function App() {
             <Heart size={20} />
             Liked songs<span className="count">{liked.length || ""}</span>
           </NavLink>
+          <NavLink to="/studio/sound-lab">
+            <AudioWaveform size={20} />
+            Sound Lab
+          </NavLink>
         </nav>
         <div className="library-title">
           <span>
@@ -261,13 +268,15 @@ export function App() {
             <strong>
               {isSearch
                 ? "Search"
-                : isLikes
-                  ? "Liked songs"
-                  : playlist
-                    ? "Playlist"
-                    : album
-                      ? "Album"
-                      : "Discover"}
+                : isSoundLab
+                  ? "Sound Lab"
+                  : isLikes
+                    ? "Liked songs"
+                    : playlist
+                      ? "Playlist"
+                      : album
+                        ? "Album"
+                        : "Discover"}
             </strong>
           </div>
           <div className="account">
@@ -321,7 +330,9 @@ export function App() {
               </button>
             </div>
           )}
-          {catalog.isPending ? (
+          {isSoundLab ? (
+            <SoundLab />
+          ) : catalog.isPending ? (
             <div className="loading" role="status">
               <Disc3 className="spin" /> Finding your frequency…
             </div>

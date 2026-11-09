@@ -14,8 +14,8 @@ decisions.
 | PM-001    | P0       | Review  | Producer  | Approve this role model, task workflow, and decision process                                                 | —                   |
 | DEC-001   | P0       | Backlog | Producer  | Resolve launch user, engine, rendering, formats, ownership, browser, storage, and AI decisions               | PRD-001             |
 | UX-001    | P0       | Backlog | Designer  | Map the preset-to-export Game Sound Lab journey and error/recovery states                                    | PRD-001, DEC-001    |
-| ARCH-001  | P0       | Backlog | Architect | Write an ADR for browser preview, offline PCM rendering, and FFmpeg job boundaries                           | DEC-003, DEC-004    |
-| AUDIO-001 | P0       | Backlog | Coder     | Prototype deterministic oscillator/envelope rendering with a recorded seed                                   | ARCH-001            |
+| ARCH-001  | P0       | Review  | Architect | Validate native Web Audio preview and offline PCM boundaries through the approved prototype                  | DEC-003, DEC-004    |
+| AUDIO-001 | P0       | Review  | Coder     | Prototype deterministic oscillator/envelope rendering with a recorded seed                                   | ARCH-001            |
 | AUDIO-002 | P0       | Backlog | Coder     | Prototype waveform display, selection, loop markers, and repeated preview                                    | UX-001              |
 | DATA-001  | P0       | Backlog | Architect | Define versioned Project, Asset, PatchRevision, RenderedAsset, and ExportManifest schemas                    | DEC-005, DEC-006    |
 | STORE-001 | P0       | Backlog | Architect | Define binary-storage interface, content hashing, authorization, and retention behavior                      | DEC-008, DATA-001   |
