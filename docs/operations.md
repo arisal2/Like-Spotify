@@ -29,13 +29,13 @@ client-visible failure with its server log entry.
 ### Kubernetes
 
 ```bash
-kubectl get application like-spotify -n argocd
-kubectl get pods,jobs,pvc,svc -n like-spotify
-kubectl rollout status deployment/api -n like-spotify
-kubectl rollout status deployment/web -n like-spotify
-kubectl logs deployment/api -n like-spotify --tail=200
-kubectl logs statefulset/mysql -n like-spotify --tail=200
-kubectl get events -n like-spotify --sort-by=.lastTimestamp
+kubectl get application bedlam-like-music -n argocd
+kubectl get pods,jobs,pvc,svc -n bedlam-like-music
+kubectl rollout status deployment/api -n bedlam-like-music
+kubectl rollout status deployment/web -n bedlam-like-music
+kubectl logs deployment/api -n bedlam-like-music --tail=200
+kubectl logs statefulset/mysql -n bedlam-like-music --tail=200
+kubectl get events -n bedlam-like-music --sort-by=.lastTimestamp
 ```
 
 ### Routine GitOps check
@@ -44,10 +44,10 @@ Use this sequence after a merge or when the UI is unavailable:
 
 ```bash
 git ls-remote origin refs/heads/master refs/heads/deploy/local
-kubectl get application like-spotify -n argocd \
+kubectl get application bedlam-like-music -n argocd \
   -o custom-columns=SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision
-kubectl get deployment,statefulset,pod,job -n like-spotify
-kubectl get svc web-local -n like-spotify
+kubectl get deployment,statefulset,pod,job -n bedlam-like-music
+kubectl get svc web-local -n bedlam-like-music
 ```
 
 The `deploy/local` revision and Argo CD's reported revision should converge
@@ -105,9 +105,9 @@ Prefer reverting the bad change on `master`; once its checks pass, promotion
 produces a new desired state and Argo CD reconciles it.
 
 ```bash
-argocd app history like-spotify
-kubectl rollout history deployment/api -n like-spotify
-kubectl rollout history deployment/web -n like-spotify
+argocd app history bedlam-like-music
+kubectl rollout history deployment/api -n bedlam-like-music
+kubectl rollout history deployment/web -n bedlam-like-music
 ```
 
 Avoid long-lived manual cluster edits because Argo CD self-heal will revert

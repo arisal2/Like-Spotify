@@ -1,19 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: like-spotify
+  name: bedlam-like-music
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: like-spotify
+  project: bedlam-like-music
   source:
-    repoURL: https://github.com/arisal2/Like-Spotify.git
+    repoURL: https://github.com/arisal2/Bedlam-Like-Music.git
     targetRevision: deploy/local
     path: deploy/k8s/gitops
   destination:
     server: https://kubernetes.default.svc
-    namespace: like-spotify
+    namespace: bedlam-like-music
   syncPolicy:
     automated:
       enabled: true

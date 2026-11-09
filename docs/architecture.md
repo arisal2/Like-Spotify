@@ -2,7 +2,7 @@
 
 ## System context
 
-Like is a single-origin web application. nginx serves the compiled React SPA
+Bedlam-Like-Music is a single-origin web application. nginx serves the compiled React SPA
 and proxies `/api/` and `/media/` to the Go service. MySQL stores user-owned
 state; audio and artwork remain outside the database on a bind mount or
 Kubernetes persistent volume.
@@ -54,7 +54,7 @@ Browser ── HTTP(S) ──▶ │ nginx + React SPA     │
 
 ## Authentication and request trust
 
-The API stores an opaque session token in the `ls_session` HttpOnly cookie.
+The API stores an opaque session token in the `blm_session` HttpOnly cookie.
 Authenticated mutation requests must include the matching `X-CSRF-Token` from
 `GET /api/v1/auth/session`. Non-safe methods also reject a mismatched `Origin`.
 Passwords are bcrypt hashes; login and registration are rate-limited in memory.

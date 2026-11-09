@@ -191,7 +191,7 @@ export function App() {
           <span className="brand-symbol">
             <Headphones size={24} />
           </span>
-          like<span className="brand-dot">.</span>
+          Bedlam-Like-Music<span className="brand-dot">.</span>
         </Link>
         <span className="sidebar-label">YOUR SOUNDTRACK</span>
         <nav aria-label="Main navigation">
@@ -725,7 +725,7 @@ export function App() {
                 </section>
               )}
               <footer className="content-footer">
-                <span className="brand">like.</span>
+                <span className="brand">Bedlam-Like-Music.</span>
                 <p>Less scrolling. More listening.</p>
                 <span>Demo catalog</span>
               </footer>

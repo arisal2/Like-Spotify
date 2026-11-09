@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"like-spotify/backend/internal/catalog"
+	"bedlam-like-music/backend/internal/catalog"
 )
 
 //go:embed migrations/*.sql
@@ -21,13 +21,13 @@ func (s *MySQL) Migrate(ctx context.Context) error {
 	}
 	defer conn.Close()
 	var locked int
-	if err := conn.QueryRowContext(ctx, "SELECT GET_LOCK('like_spotify_migrate',30)").Scan(&locked); err != nil {
+	if err := conn.QueryRowContext(ctx, "SELECT GET_LOCK('bedlam_like_music_migrate',30)").Scan(&locked); err != nil {
 		return err
 	}
 	if locked != 1 {
 		return fmt.Errorf("migration lock unavailable")
 	}
-	defer conn.ExecContext(context.Background(), "SELECT RELEASE_LOCK('like_spotify_migrate')")
+	defer conn.ExecContext(context.Background(), "SELECT RELEASE_LOCK('bedlam_like_music_migrate')")
 	if _, err := conn.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(100) PRIMARY KEY)"); err != nil {
 		return err
 	}

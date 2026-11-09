@@ -45,9 +45,9 @@ The easiest development database is the Compose `db` service:
 ```bash
 docker compose up -d db
 cd backend
-DATABASE_DSN='like_spotify:<password>@tcp(127.0.0.1:3307)/like_spotify?parseTime=true' \
+DATABASE_DSN='bedlam_like_music:<password>@tcp(127.0.0.1:3307)/bedlam_like_music?parseTime=true' \
   go run ./cmd/server migrate
-DATABASE_DSN='like_spotify:<password>@tcp(127.0.0.1:3307)/like_spotify?parseTime=true' \
+DATABASE_DSN='bedlam_like_music:<password>@tcp(127.0.0.1:3307)/bedlam_like_music?parseTime=true' \
 APP_ORIGIN='http://127.0.0.1:5173' \
 MEDIA_DIR='../assets' \
   go run ./cmd/server
@@ -123,8 +123,8 @@ publish images. For an optional manual cluster smoke test, build the local
 images before applying the local overlay:
 
 ```bash
-docker build -f backend/Dockerfile -t like-spotify-api:local .
-docker build -f web/Dockerfile -t like-spotify-web:local .
+docker build -f backend/Dockerfile -t bedlam-like-music-api:local .
+docker build -f web/Dockerfile -t bedlam-like-music-web:local .
 kubectl apply -k deploy/k8s/local
 kubectl apply -f deploy/k8s/migration-job.yaml
 ```

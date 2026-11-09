@@ -12,7 +12,7 @@ endpoints used by container and Kubernetes probes; nginx does not proxy them.
   rejected.
 - Errors use `{"error":{"code":"...","message":"..."}}`.
 - Every API response includes `X-Request-ID` for log correlation.
-- Authenticated mutations require the `ls_session` cookie and
+- Authenticated mutations require the `blm_session` cookie and
   `X-CSRF-Token` header.
 - Authentication endpoints are rate-limited.
 
@@ -64,17 +64,17 @@ derived from the session; user IDs supplied by clients are not trusted.
 ## Cookie and CSRF example
 
 ```bash
-curl -sS -c /tmp/like.cookies \
+curl -sS -c /tmp/bedlam-like-music.cookies \
   -H 'Content-Type: application/json' \
   -H 'Origin: http://localhost:8080' \
   -d '{"username":"listener","name":"Listener","password":"use-a-long-password"}' \
   http://localhost:8080/api/v1/auth/register
 
 # Read csrfToken from this response.
-curl -sS -b /tmp/like.cookies \
+curl -sS -b /tmp/bedlam-like-music.cookies \
   http://localhost:8080/api/v1/auth/session
 
-curl -i -b /tmp/like.cookies \
+curl -i -b /tmp/bedlam-like-music.cookies \
   -X PUT \
   -H 'Origin: http://localhost:8080' \
   -H 'X-CSRF-Token: <token-from-session>' \

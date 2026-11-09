@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"like-spotify/backend/internal/catalog"
+	"bedlam-like-music/backend/internal/catalog"
 )
 
 func TestLocalMoodsStayGrounded(t *testing.T) {

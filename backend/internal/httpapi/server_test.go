@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"like-spotify/backend/internal/recommend"
-	"like-spotify/backend/internal/store"
+	"bedlam-like-music/backend/internal/recommend"
+	"bedlam-like-music/backend/internal/store"
 )
 
 type stubRepository struct{ store.Repository }
@@ -46,7 +46,7 @@ func TestAuthenticationBoundaries(t *testing.T) {
 			r.Header.Set("X-CSRF-Token", tc.csrf)
 			r.Header.Set("Origin", tc.origin)
 			if tc.cookie != "" {
-				r.AddCookie(&http.Cookie{Name: "ls_session", Value: tc.cookie})
+				r.AddCookie(&http.Cookie{Name: "blm_session", Value: tc.cookie})
 			}
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, r)

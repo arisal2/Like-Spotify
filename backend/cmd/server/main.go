@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"like-spotify/backend/internal/httpapi"
-	"like-spotify/backend/internal/recommend"
-	"like-spotify/backend/internal/store"
+	"bedlam-like-music/backend/internal/httpapi"
+	"bedlam-like-music/backend/internal/recommend"
+	"bedlam-like-music/backend/internal/store"
 )
 
 func main() {

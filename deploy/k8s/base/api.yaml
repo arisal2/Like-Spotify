@@ -39,7 +39,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: like-spotify-api:local
+          image: bedlam-like-music-api:local
           imagePullPolicy: IfNotPresent
           securityContext:
             readOnlyRootFilesystem: true

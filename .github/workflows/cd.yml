@@ -166,7 +166,7 @@ jobs:
           sed -i "/newName: .*\/web$/ { n; s/newTag: .*/newTag: ${web_tag}/; }" deploy/k8s/gitops/kustomization.yaml
       - name: Validate rendered manifests
         if: steps.revision.outputs.promote == 'true'
-        run: kubectl kustomize deploy/k8s/gitops > /tmp/like-spotify-gitops.yaml
+        run: kubectl kustomize deploy/k8s/gitops > /tmp/bedlam-like-music-gitops.yaml
       - name: Commit the deployment revision
         if: steps.revision.outputs.promote == 'true'
         env:

@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: like-spotify
+  name: bedlam-like-music
   namespace: argocd
 spec:
-  description: Like Spotify application workloads
+  description: Bedlam-Like-Music application workloads
   sourceRepos:
-    - https://github.com/arisal2/Like-Spotify.git
+    - https://github.com/arisal2/Bedlam-Like-Music.git
   destinations:
-    - namespace: like-spotify
+    - namespace: bedlam-like-music
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ''

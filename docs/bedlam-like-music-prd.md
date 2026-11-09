@@ -1,4 +1,4 @@
-# Product Requirements: Like Studio
+# Product Requirements: Bedlam-Like-Music Studio
 
 | Field             | Value                                                                 |
 | ----------------- | --------------------------------------------------------------------- |
@@ -10,7 +10,7 @@
 
 ## Executive summary
 
-Like will evolve from a self-hosted music player into **Like Studio**, a browser-based workspace for listening to music, learning theory, composing electronic music, designing original game sounds, and exporting reusable audio assets.
+Bedlam-Like-Music will evolve from a self-hosted music player into **Bedlam-Like-Music Studio**, a browser-based workspace for listening to music, learning theory, composing electronic music, designing original game sounds, and exporting reusable audio assets.
 
 The existing player becomes the Listen and Library foundation. The first major creation feature will be a focused **Game Sound Lab** rather than a complete digital audio workstation. Users will create procedural sound effects, edit them non-destructively, generate controlled variations, organize them into projects, and export assets and metadata for game engines. Music-theory tools, a step sequencer, and adaptive music will expand the product incrementally.
 
@@ -33,7 +33,7 @@ Full desktop DAWs solve many professional production problems but can be unneces
 
 **Create, understand, organize, and export original audio for games from one private workspace.**
 
-Like Studio should provide a welcoming path from a first synthesized UI click to adaptive game music, without hiding the musical or technical decisions that produced the result.
+Bedlam-Like-Music Studio should provide a welcoming path from a first synthesized UI click to adaptive game music, without hiding the musical or technical decisions that produced the result.
 
 ## Product principles
 
@@ -87,7 +87,7 @@ A creator who values deterministic generation, batch variations, asset conventio
 ## Product structure
 
 ```text
-Like Studio
+Bedlam-Like-Music Studio
 ├── Listen       current player, playlists, favorites, discovery
 ├── Library      songs, samples, loops, presets, effects, exports
 ├── Sound Lab    procedural game effects and waveform editing
@@ -646,7 +646,7 @@ The Game Sound Lab MVP is complete when:
 
 Approve the PRD when reviewers agree on:
 
-- Like Studio as the product direction.
+- Bedlam-Like-Music Studio as the product direction.
 - Game Sound Lab as the first creation MVP rather than a full DAW.
 - The create, vary, edit, export, and Godot integration journeys.
 - Reproducibility, provenance, storage, security, and accessibility requirements.

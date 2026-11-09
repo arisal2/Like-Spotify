@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Song } from "../lib/api";
 import { shuffled } from "../lib/queue";
 
-const storagePrefix = "like.playback.v1.";
+const storagePrefix = "bedlam-like-music.playback.v1.";
 
 type StoredPlayback = {
   queueIDs: number[];

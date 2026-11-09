@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: like-spotify
+  name: bedlam-like-music
   annotations:
     argocd.argoproj.io/sync-wave: '-4'
   labels:
-    app.kubernetes.io/part-of: like-spotify
+    app.kubernetes.io/part-of: bedlam-like-music
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/audit: restricted
