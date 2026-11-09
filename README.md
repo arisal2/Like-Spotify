@@ -124,7 +124,7 @@ result, private-GHCR notes, troubleshooting, upgrades, and teardown.
 
 ## Documentation
 
-- [Product suite PRD](docs/product-suite-prd.md)
+- [Like Studio PRD](docs/like-studio-prd.md)
 - [Documentation index](docs/README.md)
 - [Architecture and design](docs/architecture.md)
 - [Development and testing](docs/development.md)
