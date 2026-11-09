@@ -21,6 +21,8 @@ decisions.
 | STORE-001 | P0       | Backlog | Architect | Define binary-storage interface, content hashing, authorization, and retention behavior                      | DEC-008, DATA-001   |
 | QA-001    | P0       | Backlog | Architect | Define generated-signal fixtures, numeric audio tolerances, and export-validation strategy                   | ARCH-001            |
 | SEC-001   | P0       | Backlog | Architect | Threat-model uploads, project imports, DSP complexity, encoding jobs, and export downloads                   | DATA-001, STORE-001 |
+| OPS-001   | P0       | Review  | Architect | Add isolated staging and approval-gated production GitOps promotion using immutable images                   | —                   |
+| SEC-002   | P0       | Review  | Coder     | Block vulnerable dependency changes and remediate the active Go module advisory                              | —                   |
 
 ## PRD-001: approve product direction
 

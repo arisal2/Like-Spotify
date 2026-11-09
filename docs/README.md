@@ -12,6 +12,7 @@ Use this page as the entry point for operating and changing Bedlam-Like-Music.
 | [Operations](operations.md)                              | inspect health, logs, backups, recovery, and rollbacks         |
 | [Argo CD](argo-cd.md)                                    | install the local Kubernetes and Argo CD deployment            |
 | [GitHub Actions](github-actions.md)                      | configure CI, promotion, and branch protection                 |
+| [Deployment environments](deployment-environments.md)    | promote immutable staging releases into protected production   |
 | [Security policy](../SECURITY.md)                        | report vulnerabilities and review the deployment baseline      |
 
 ## Choose a path

@@ -2,7 +2,7 @@ name: Build and promote
 
 on:
   workflow_run:
-    workflows: ['Test and package']
+    workflows: ["Test and package"]
     types: [completed]
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: gitops-local
+  group: gitops-non-production
   cancel-in-progress: false
 
 jobs:
@@ -116,6 +116,16 @@ jobs:
       needs.changes.outputs.promote == 'true' &&
       (needs.publish.result == 'success' || needs.publish.result == 'skipped')
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - environment: local
+            branch: deploy/local
+            overlay: deploy/k8s/gitops
+          - environment: staging
+            branch: deploy/staging
+            overlay: deploy/k8s/staging
     steps:
       - uses: actions/checkout@v7
         with:
@@ -138,19 +148,32 @@ jobs:
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
           API_CHANGED: ${{ needs.changes.outputs.api }}
           WEB_CHANGED: ${{ needs.changes.outputs.web }}
+          TARGET_BRANCH: ${{ matrix.branch }}
+          TARGET_OVERLAY: ${{ matrix.overlay }}
+          TARGET_ENVIRONMENT: ${{ matrix.environment }}
+          IMAGES_CHANGED: ${{ needs.changes.outputs.images }}
         run: |
-          if git ls-remote --exit-code --heads origin refs/heads/deploy/local >/dev/null; then
-            git fetch origin refs/heads/deploy/local:refs/remotes/origin/deploy/local
-            previous_api=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/api$/ { getline; if ($1 == "newTag:") print $2 }')
-            previous_web=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/web$/ { getline; if ($1 == "newTag:") print $2 }')
-            git switch -c deploy-local refs/remotes/origin/deploy/local
+          if git ls-remote --exit-code --heads origin "refs/heads/${TARGET_BRANCH}" >/dev/null; then
+            git fetch origin "refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
+            previous_api=$(git show "refs/remotes/origin/${TARGET_BRANCH}:${TARGET_OVERLAY}/kustomization.yaml" | awk '/newName: .*\/api$/ { getline; if ($1 == "newTag:") print $2 }')
+            previous_web=$(git show "refs/remotes/origin/${TARGET_BRANCH}:${TARGET_OVERLAY}/kustomization.yaml" | awk '/newName: .*\/web$/ { getline; if ($1 == "newTag:") print $2 }')
+            git switch -c "promote-${TARGET_ENVIRONMENT}" "refs/remotes/origin/${TARGET_BRANCH}"
             # Keep the deployment branch history while replacing its tree with
             # the tested revision. This runs only in the disposable CI checkout.
             git read-tree --reset -u "$DEPLOY_SHA"
           else
-            git switch -c deploy-local
-            previous_api="$DEPLOY_SHA"
-            previous_web="$DEPLOY_SHA"
+            git switch -c "promote-${TARGET_ENVIRONMENT}"
+            if [ "$TARGET_BRANCH" != 'deploy/local' ] && git ls-remote --exit-code --heads origin refs/heads/deploy/local >/dev/null; then
+              git fetch origin refs/heads/deploy/local:refs/remotes/origin/deploy/local
+              previous_api=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/api$/ { getline; if ($1 == "newTag:") print $2 }')
+              previous_web=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/web$/ { getline; if ($1 == "newTag:") print $2 }')
+            elif [ "$IMAGES_CHANGED" = 'true' ] && [ "$API_CHANGED" = 'true' ] && [ "$WEB_CHANGED" = 'true' ]; then
+              previous_api="$DEPLOY_SHA"
+              previous_web="$DEPLOY_SHA"
+            else
+              echo 'Cannot initialize an environment without existing immutable image tags.'
+              exit 1
+            fi
           fi
 
           api_tag="$previous_api"
@@ -162,15 +185,19 @@ jobs:
             exit 1
           fi
 
-          sed -i "/newName: .*\/api$/ { n; s/newTag: .*/newTag: ${api_tag}/; }" deploy/k8s/gitops/kustomization.yaml
-          sed -i "/newName: .*\/web$/ { n; s/newTag: .*/newTag: ${web_tag}/; }" deploy/k8s/gitops/kustomization.yaml
+          sed -i "/newName: .*\/api$/ { n; s/newTag: .*/newTag: ${api_tag}/; }" "${TARGET_OVERLAY}/kustomization.yaml"
+          sed -i "/newName: .*\/web$/ { n; s/newTag: .*/newTag: ${web_tag}/; }" "${TARGET_OVERLAY}/kustomization.yaml"
       - name: Validate rendered manifests
         if: steps.revision.outputs.promote == 'true'
-        run: kubectl kustomize deploy/k8s/gitops > /tmp/bedlam-like-music-gitops.yaml
+        env:
+          TARGET_OVERLAY: ${{ matrix.overlay }}
+        run: kubectl kustomize "$TARGET_OVERLAY" > /tmp/bedlam-like-music-gitops.yaml
       - name: Commit the deployment revision
         if: steps.revision.outputs.promote == 'true'
         env:
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+          TARGET_BRANCH: ${{ matrix.branch }}
+          TARGET_ENVIRONMENT: ${{ matrix.environment }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -179,10 +206,10 @@ jobs:
             echo 'GitOps overlay already points at this revision.'
             exit 0
           fi
-          git commit -m "deploy: ${DEPLOY_SHA} [skip ci]"
+          git commit -m "deploy(${TARGET_ENVIRONMENT}): ${DEPLOY_SHA} [skip ci]"
           # Refuse to promote if master changed while preparing this deployment.
           if [ "$(git ls-remote origin refs/heads/master | cut -f1)" != "$DEPLOY_SHA" ]; then
             echo 'A newer master revision exists; skipping promotion.'
             exit 0
           fi
-          git push origin HEAD:refs/heads/deploy/local
+          git push origin "HEAD:refs/heads/${TARGET_BRANCH}"

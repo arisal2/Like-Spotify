@@ -1,0 +1,74 @@
+name: Promote production
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_gitops_sha:
+        description: Exact tested head SHA of deploy/staging
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gitops-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+      - uses: azure/setup-kubectl@v5
+      - name: Verify the approved staging state
+        env:
+          APPROVED_SHA: ${{ inputs.staging_gitops_sha }}
+        run: |
+          git fetch origin refs/heads/deploy/staging:refs/remotes/origin/deploy/staging
+          actual_sha=$(git rev-parse refs/remotes/origin/deploy/staging)
+          if [ "$actual_sha" != "$APPROVED_SHA" ]; then
+            echo "deploy/staging moved: expected $APPROVED_SHA, found $actual_sha"
+            exit 1
+          fi
+          for image in api web; do
+            tag=$(git show "${APPROVED_SHA}:deploy/k8s/staging/kustomization.yaml" | awk -v image="$image" '$0 ~ "newName: .*/" image "$" { getline; if ($1 == "newTag:") print $2 }')
+            if ! printf '%s' "$tag" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "Staging $image image is not pinned to an immutable commit SHA."
+              exit 1
+            fi
+          done
+      - name: Promote the exact staging image set
+        env:
+          APPROVED_SHA: ${{ inputs.staging_gitops_sha }}
+        run: |
+          staging_api=$(git show "${APPROVED_SHA}:deploy/k8s/staging/kustomization.yaml" | awk '/newName: .*\/api$/ { getline; if ($1 == "newTag:") print $2 }')
+          staging_web=$(git show "${APPROVED_SHA}:deploy/k8s/staging/kustomization.yaml" | awk '/newName: .*\/web$/ { getline; if ($1 == "newTag:") print $2 }')
+
+          if git ls-remote --exit-code --heads origin refs/heads/deploy/production >/dev/null; then
+            git fetch origin refs/heads/deploy/production:refs/remotes/origin/deploy/production
+            git switch -c promote-production refs/remotes/origin/deploy/production
+          else
+            git switch -c promote-production
+          fi
+          git read-tree --reset -u "$APPROVED_SHA"
+          sed -i "/newName: .*\/api$/ { n; s/newTag: .*/newTag: ${staging_api}/; }" deploy/k8s/production/kustomization.yaml
+          sed -i "/newName: .*\/web$/ { n; s/newTag: .*/newTag: ${staging_web}/; }" deploy/k8s/production/kustomization.yaml
+          kubectl kustomize deploy/k8s/production > /tmp/bedlam-like-music-production.yaml
+      - name: Commit production desired state
+        env:
+          APPROVED_SHA: ${{ inputs.staging_gitops_sha }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Production already matches this staging state.'
+            exit 0
+          fi
+          git commit -m "deploy(production): ${APPROVED_SHA} [skip ci]"
+          git push origin HEAD:refs/heads/deploy/production

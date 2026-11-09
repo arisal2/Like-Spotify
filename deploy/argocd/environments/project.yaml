@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bedlam-like-music-environments
+  namespace: argocd
+spec:
+  description: Staging and production Bedlam-Like-Music workloads
+  sourceRepos:
+    - https://github.com/arisal2/Bedlam-Like-Music.git
+  destinations:
+    - namespace: bedlam-like-music-staging
+      server: https://kubernetes.default.svc
+    - namespace: bedlam-like-music-production
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: ''
+      kind: PersistentVolumeClaim
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: ReplicaSet
+    - group: apps
+      kind: StatefulSet
+    - group: batch
+      kind: Job
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+  orphanedResources:
+    warn: true
