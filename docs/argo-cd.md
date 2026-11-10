@@ -43,10 +43,25 @@ do not put it into Git, screenshots, or logs:
 
 ```bash
 kubectl get secret argocd-initial-admin-secret -n argocd-test \
-  -o jsonpath='{.data.password}' | base64 --decode
+  -o jsonpath='{.data.password}' | base64 --decode; printf '\n'
 ```
 
-Repeat with `argocd-production`. Rotate both passwords after initial login.
+Each instance has a different password. Use username `admin` and the decoded
+password from the namespace matching the URL. The trailing newline prevents
+zsh's `%` prompt marker from appearing beside the password; that marker is not
+part of the password.
+
+On macOS, copy the test password directly without displaying it:
+
+```bash
+kubectl --context docker-desktop get secret argocd-initial-admin-secret -n argocd-test \
+  -o jsonpath='{.data.password}' | base64 --decode | pbcopy
+```
+
+Paste it into <https://localhost:8082>. For <https://localhost:8084>, repeat
+with `argocd-production`. The initial local HTTPS certificate is self-signed;
+the browser may require accepting that certificate before showing the login
+page. Rotate both passwords after initial login.
 
 ## Activate applications
 

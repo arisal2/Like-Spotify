@@ -19,9 +19,11 @@ publish uncommitted workflow changes.
 
 Before enabling delivery:
 
-1. Publish the reviewed workflow changes to both source branches and set the
-   GitHub default branch to `main`. `workflow_run` workflows must exist on the
-   default branch to run.
+1. Development CI calls the delivery workflow from the same revision after
+   `ci-gate` succeeds; test delivery does not depend on the default branch.
+   Before enabling production, publish the reviewed production workflow to
+   `main` and set the default branch to `main`; its `workflow_run` trigger
+   requires the workflow on the default branch.
 2. Protect `development` and `main`: require pull requests and `ci-gate`, block
    force pushes and deletion, and restrict bypass permissions.
 3. Create the GitHub environment `production`, require a reviewer, prevent
