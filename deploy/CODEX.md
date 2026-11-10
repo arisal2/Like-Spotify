@@ -5,11 +5,11 @@ Read the repository-root `CODEX.md` first.
 ## Ownership model
 
 - `deploy/k8s/local` is a manual pre-merge smoke-test overlay.
-- `deploy/k8s/gitops` on the automation-owned `deploy/local` branch is the
-  desired state reconciled by Argo CD.
-- `deploy/staging` is promoted automatically from tested `master`; production
-  promotion copies an explicitly approved `deploy/staging` state to the
-  protected `deploy/production` branch without rebuilding images.
+- `deploy/k8s/test` on the automation-owned `deploy/test` branch is the desired
+  state reconciled by the Docker Desktop test Argo CD installation.
+- Production uses the dedicated second worker in the same Docker Desktop cluster.
+  Separate namespace-scoped Argo CD instances manage test and production.
+  `development` feeds test; `main` promotes the verified test images without rebuilding.
 - CI publishes immutable images; Argo CD deploys declared state. Do not make
   long-lived manual cluster patches.
 
@@ -26,6 +26,6 @@ Read the repository-root `CODEX.md` first.
 
 ## Required validation
 
-Render base, local, GitOps, and Argo CD Kustomize configurations after manifest
-changes. Document operational, secret, storage, or recovery changes in the same
-work item.
+Render base, local, test, production, and both Argo CD Kustomize configurations
+after manifest changes. Document operational, secret, storage, or recovery
+changes in the same work item.

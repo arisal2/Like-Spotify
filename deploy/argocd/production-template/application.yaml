@@ -1,19 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: bedlam-like-music-staging
-  namespace: argocd
+  name: bedlam-like-music-production
+  namespace: argocd-production
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: bedlam-like-music-environments
+  project: bedlam-like-music-production
   source:
     repoURL: https://github.com/arisal2/Bedlam-Like-Music.git
-    targetRevision: deploy/staging
-    path: deploy/k8s/staging
+    targetRevision: deploy/production
+    path: deploy/k8s/production
   destination:
     server: https://kubernetes.default.svc
-    namespace: bedlam-like-music-staging
+    namespace: bedlam-like-music-production
   syncPolicy:
     automated:
       enabled: true
@@ -21,7 +21,6 @@ spec:
       selfHeal: true
       allowEmpty: false
     syncOptions:
-      - CreateNamespace=true
       - PruneLast=true
       - ApplyOutOfSyncOnly=true
     retry:
