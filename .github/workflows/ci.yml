@@ -367,7 +367,9 @@ jobs:
 
   deliver-test:
     needs: ci-gate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+    if: >-
+      always() && needs.ci-gate.result == 'success' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/development'
     permissions:
       contents: write
       packages: write
