@@ -89,3 +89,14 @@ source-equality and environment rules apply.
 A workflow-level concurrency group serializes each environment's writes.
 Git pushes remain non-forced. Production approval rules and a successful live
 smoke test are required before treating this as operational delivery.
+
+## Deployment-controller scan exception
+
+Trivy rule `KSV-0056` flags the networking write permissions required by Argo
+CD to reconcile Services and NetworkPolicies. `.trivyignore.yaml` limits this
+exception to `deploy/cluster/environment-rbac.yaml`, with a review expiry of
+2027-02-10. The role remains namespace-scoped and bound only to the matching
+Argo CD controller and server. Application identities receive no such grant.
+Other files, rules, vulnerability findings, and secret findings remain gated.
+Review the exception and cross-environment authorization checks whenever this
+RBAC changes; do not extend it to application roles.

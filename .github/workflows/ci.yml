@@ -306,6 +306,7 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
+          trivyignores: .trivyignore.yaml
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
