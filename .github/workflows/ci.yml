@@ -1,7 +1,7 @@
 name: Test and package
 on:
   push:
-    branches: [master]
+    branches: [development, main]
   pull_request:
   workflow_call:
 permissions:
@@ -41,7 +41,7 @@ jobs:
           container_api=false
           container_web=false
 
-          if [ "$EVENT_NAME" = 'workflow_call' ]; then
+          if [ "$EVENT_NAME" != 'push' ] && [ "$EVENT_NAME" != 'pull_request' ]; then
             backend=true
             frontend=true
             browser=true
@@ -58,10 +58,11 @@ jobs:
               base="$BEFORE_SHA"
               head="$CURRENT_SHA"
               if [ -z "$base" ] || [ "$base" = '0000000000000000000000000000000000000000' ]; then
-                base="${head}^"
+                base=$(git hash-object -t tree /dev/null)
               fi
             fi
 
+            git diff --name-only "$base" "$head" > /tmp/changed-paths
             while IFS= read -r path; do
               case "$path" in
                 backend/*)
@@ -70,7 +71,7 @@ jobs:
                   frontend=true; browser=true; security=true; container_web=true ;;
                 deploy/*)
                   kubernetes=true; security=true ;;
-                .github/workflows/*)
+                .github/workflows/*|scripts/*)
                   backend=true; frontend=true; browser=true; kubernetes=true; security=true; container_api=true; container_web=true ;;
                 .dockerignore)
                   backend=true; frontend=true; browser=true; security=true; container_api=true; container_web=true ;;
@@ -81,7 +82,7 @@ jobs:
                 *)
                   security=true ;;
               esac
-            done < <(git diff --name-only "$base" "$head")
+            done < /tmp/changed-paths
           fi
 
           container_images=false
@@ -264,7 +265,7 @@ jobs:
 
   containers:
     needs: changes
-    if: needs.changes.outputs.container-images == 'true'
+    if: github.event_name == 'pull_request' && needs.changes.outputs.container-images == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJSON(needs.changes.outputs.container-matrix) }}
@@ -277,8 +278,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: false
           tags: bedlam-like-music-${{ matrix.component }}:ci
-          cache-from: type=gha,scope=ci-${{ matrix.component }}
-          cache-to: type=gha,mode=max,scope=ci-${{ matrix.component }}
+          cache-from: type=gha,scope=${{ matrix.component }}-amd64
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}-amd64
 
   kubernetes:
     needs: changes
@@ -290,11 +291,10 @@ jobs:
       - run: kubectl kustomize deploy/k8s/base > /tmp/base.yaml
       - run: cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
       - run: kubectl kustomize deploy/k8s/local > /tmp/local.yaml
-      - run: kubectl kustomize deploy/k8s/gitops > /tmp/gitops.yaml
-      - run: kubectl kustomize deploy/k8s/staging > /tmp/staging.yaml
+      - run: kubectl kustomize deploy/k8s/test > /tmp/test.yaml
       - run: kubectl kustomize deploy/k8s/production > /tmp/production.yaml
       - run: kubectl kustomize deploy/argocd > /tmp/argocd.yaml
-      - run: kubectl kustomize deploy/argocd/environments > /tmp/argocd-environments.yaml
+      - run: kubectl kustomize deploy/argocd/production-template > /tmp/argocd-production.yaml
   security-config:
     needs: changes
     if: needs.changes.outputs.security == 'true'
@@ -306,6 +306,7 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
+          trivyignores: .trivyignore.yaml
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true

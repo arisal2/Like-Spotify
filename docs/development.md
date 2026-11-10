@@ -112,7 +112,7 @@ path-aware job. No copyrighted fixture is stored in Git.
 kubectl kustomize deploy/k8s/base >/tmp/like-base.yaml
 cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
 kubectl kustomize deploy/k8s/local >/tmp/like-local.yaml
-kubectl kustomize deploy/k8s/gitops >/tmp/like-gitops.yaml
+kubectl kustomize deploy/k8s/test >/tmp/like-gitops.yaml
 kubectl kustomize deploy/argocd >/tmp/like-argocd.yaml
 ```
 
@@ -131,13 +131,16 @@ kubectl apply -f deploy/k8s/migration-job.yaml
 
 Use [the Argo CD guide](argo-cd.md) for the persistent GitOps deployment. Do
 not manually apply the GitOps overlay: Argo CD owns it and obtains its exact
-image tags from `deploy/local`.
+image tags from `deploy/test`.
 
 ## Change workflow
 
-1. Branch from current `master`.
+1. Branch from current `development`.
 2. Keep changes scoped and use conventional commit messages.
 3. Run the relevant checks locally.
-4. Open a pull request; do not push changes directly to `master`.
+4. Open a pull request; do not push changes directly to `development`.
 5. Merge only after required checks pass.
 6. Verify the post-merge test, image promotion, and Argo CD sync.
+
+For the current three-node topology and production promotion rules, see
+[deployment environments](deployment-environments.md) and [CI/CD](github-actions.md).

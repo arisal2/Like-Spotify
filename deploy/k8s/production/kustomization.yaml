@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: bedlam-like-music-production
 resources:
   - ../remote
+  - service.yaml
 images:
   - name: bedlam-like-music-api:local
     newName: ghcr.io/arisal2/bedlam-like-music/api
@@ -14,10 +15,24 @@ patches:
   - path: config-patch.yaml
   - path: scale-patch.yaml
   - target:
-      version: v1
       kind: Namespace
-      name: bedlam-like-music
     patch: |-
-      - op: replace
-        path: /metadata/name
-        value: bedlam-like-music-production
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: bedlam-like-music
+      $patch: delete
+  - target:
+      kind: (Deployment|StatefulSet|Job)
+    patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          bedlam.io/environment: production
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: bedlam.io/environment
+            operator: Equal
+            value: production
+            effect: NoSchedule

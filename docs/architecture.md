@@ -74,9 +74,11 @@ are not part of the provider request.
 ## Deployment flow
 
 Pull requests run Go, frontend, browser, Kubernetes-render, dependency, secret,
-and configuration checks. A successful `master` run triggers image publication
-for AMD64 and ARM64, then writes the tested commit and immutable image tags to
-`deploy/local`. Argo CD watches only that branch and self-heals the cluster.
+and configuration checks. A successful `development` run triggers image publication
+for ARM64, then writes the tested commit and source-SHA image tags to
+`deploy/test`. Docker Desktop Argo CD reconciles that test state. A separate,
+approved workflow copies the exact tested image set into `deploy/production`
+for the second namespace-scoped Argo CD instance on the production worker.
 
 ## Kubernetes security boundaries
 
@@ -88,3 +90,6 @@ for AMD64 and ARM64, then writes the tested commit and immutable image tags to
 - CPU and memory requests/limits plus health probes.
 
 NetworkPolicy only provides isolation when the cluster CNI enforces it.
+
+For the current three-node topology and production promotion rules, see
+[deployment environments](deployment-environments.md) and [CI/CD](github-actions.md).

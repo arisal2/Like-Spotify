@@ -1,18 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: bedlam-like-music
-  namespace: argocd
+  name: bedlam-like-music-test
+  namespace: argocd-test
 spec:
-  description: Bedlam-Like-Music application workloads
+  description: Docker Desktop test workloads for Bedlam-Like-Music
   sourceRepos:
     - https://github.com/arisal2/Bedlam-Like-Music.git
   destinations:
-    - namespace: bedlam-like-music
+    - namespace: bedlam-like-music-test
       server: https://kubernetes.default.svc
-  clusterResourceWhitelist:
-    - group: ''
-      kind: Namespace
+  clusterResourceWhitelist: []
   namespaceResourceWhitelist:
     - group: ''
       kind: ConfigMap
