@@ -133,8 +133,8 @@ environment, with selectors and taints keeping workloads on their assigned worke
 
 ```text
 PR → development → CI → changed ARM64 images → deploy/test → test Argo CD
-          └── verify test → PR → main → CI → approval → deploy/production
-                                                       → production Argo CD
+          └── verify test → PR → master → CI → deploy/production
+                                                 → production Argo CD
 ```
 
 Delivery compares changes against the last published source and reuses unchanged

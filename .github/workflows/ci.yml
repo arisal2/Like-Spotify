@@ -1,7 +1,7 @@
 name: Test and package
 on:
   push:
-    branches: [development, main]
+    branches: [development, master]
   pull_request:
   workflow_call:
 permissions:
@@ -374,3 +374,23 @@ jobs:
       contents: write
       packages: write
     uses: ./.github/workflows/cd.yml
+    with:
+      environment: test
+      source_branch: development
+      target_branch: deploy/test
+      target_overlay: deploy/k8s/test
+
+  deliver-production:
+    needs: ci-gate
+    if: >-
+      always() && needs.ci-gate.result == 'success' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/cd.yml
+    with:
+      environment: production
+      source_branch: master
+      target_branch: deploy/production
+      target_overlay: deploy/k8s/production

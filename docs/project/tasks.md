@@ -83,7 +83,7 @@ ARCH-001, QA-001, and SEC-001 are approved.
 ## OPS-001: approved three-node update (2026-11-10)
 
 User approved a control plane and separate test/production workers, two Argo CD
-instances, and development/main branches. Implementation includes dedicated
+instances, and development/master branches. Implementation includes dedicated
 scheduling, namespace RBAC, source-aware image reuse, native ARM64 publication,
 and production source verification. Activation still requires publishing the
 reviewed changes, repository protection settings, runtime Secrets, and a live
