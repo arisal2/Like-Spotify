@@ -1,0 +1,61 @@
+# Rendered by scripts/bootstrap-cluster.sh for each environment.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argocd-workloads
+  namespace: bedlam-like-music-ENVIRONMENT
+rules:
+  # Argo's cache discovers every namespaced resource type before comparison.
+  # Read access stays inside this Role's one workload namespace; mutation
+  # remains limited by the narrower rules below.
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: [get, list, watch]
+  - apiGroups: ['']
+    resources: [configmaps, services, serviceaccounts, persistentvolumeclaims, pods, events]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: ['']
+    resources: [secrets, pods/log]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, statefulsets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-workloads
+  namespace: bedlam-like-music-ENVIRONMENT
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argocd-workloads
+subjects:
+  - kind: ServiceAccount
+    name: argocd-application-controller
+    namespace: argocd-ENVIRONMENT
+  - kind: ServiceAccount
+    name: argocd-server
+    namespace: argocd-ENVIRONMENT
+---
+# Uses the controller/server's projected service-account credentials in cluster.
+# This Secret contains cluster configuration, not a static credential.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: local-workloads
+  namespace: argocd-ENVIRONMENT
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+stringData:
+  name: local-ENVIRONMENT
+  server: https://kubernetes.default.svc
+  namespaces: bedlam-like-music-ENVIRONMENT
+  clusterResources: 'false'
+  config: '{}'

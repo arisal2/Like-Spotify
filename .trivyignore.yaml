@@ -1,0 +1,13 @@
+# Deployment controllers must reconcile networking inside their assigned namespace.
+# This exception does not apply to application identities or other RBAC files.
+misconfigurations:
+  - id: KSV-0056
+    paths:
+      - deploy/cluster/environment-rbac.yaml
+    expired_at: 2027-02-10
+    statement: >-
+      The namespace-scoped argocd-workloads Role intentionally manages Services
+      and NetworkPolicies for GitOps reconciliation. RoleBindings grant access
+      only to the matching environment's Argo CD controller and server, never
+      application service accounts. Cross-environment access is denied and was
+      verified with kubectl auth can-i. Review this exception when RBAC changes.

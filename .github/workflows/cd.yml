@@ -1,24 +1,21 @@
 name: Build and promote
 
 on:
-  workflow_run:
-    workflows: ["Test and package"]
-    types: [completed]
+  workflow_call:
 
 permissions:
   contents: write
   packages: write
 
 concurrency:
-  group: gitops-non-production
+  group: gitops-test
   cancel-in-progress: false
 
 jobs:
   changes:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'master'
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.paths.outputs.api }}
@@ -29,8 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          ref: ${{ github.sha }}
+          fetch-depth: 0
       - id: paths
         name: Select images and promotion from changed paths
         shell: bash
@@ -39,23 +36,33 @@ jobs:
           web=false
           deploy=false
 
+          # Compare against the last published source, covering failed/skipped runs
+          # and multi-commit pushes. A new deployment branch builds both images.
+          base=$(git hash-object -t tree /dev/null)
+          if git ls-remote --exit-code --heads origin refs/heads/deploy/test >/dev/null; then
+            git fetch origin refs/heads/deploy/test:refs/remotes/origin/deploy/test
+            candidate=$(git show refs/remotes/origin/deploy/test:.delivery-source 2>/dev/null || true)
+            if [[ "$candidate" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${candidate}^{commit}"; then
+              base="$candidate"
+            fi
+          fi
+          git diff --name-only "$base" HEAD > /tmp/changed-paths
           while IFS= read -r path; do
             case "$path" in
               backend/*)
                 api=true ;;
               web/*)
                 web=true ;;
-              .dockerignore)
+              .dockerignore|.github/workflows/cd.yml|scripts/*)
                 api=true; web=true ;;
               deploy/*)
                 deploy=true ;;
             esac
-          done < <(git diff --name-only HEAD^ HEAD)
+          done < /tmp/changed-paths
 
           images=false
           if [ "$api" = true ] || [ "$web" = true ]; then images=true; fi
-          promote=false
-          if [ "$images" = true ] || [ "$deploy" = true ]; then promote=true; fi
+          promote=true # Record every tested source revision, even when images are reused.
 
           include='[]'
           if [ "$api" = true ]; then
@@ -76,14 +83,13 @@ jobs:
   publish:
     needs: changes
     if: needs.changes.outputs.images == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     strategy:
       matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-      - uses: docker/setup-qemu-action@v4
+          ref: ${{ github.sha }}
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4
         with:
@@ -98,15 +104,15 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:${{ github.event.workflow_run.head_sha }}
-            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:main
+            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:${{ github.sha }}
+            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:development
           provenance: mode=max
           sbom: true
-          cache-from: type=gha,scope=${{ matrix.component }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+          cache-from: type=gha,scope=${{ matrix.component }}-arm64
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}-arm64
 
   promote:
     needs: [changes, publish]
@@ -116,41 +122,31 @@ jobs:
       needs.changes.outputs.promote == 'true' &&
       (needs.publish.result == 'success' || needs.publish.result == 'skipped')
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      matrix:
-        include:
-          - environment: local
-            branch: deploy/local
-            overlay: deploy/k8s/gitops
-          - environment: staging
-            branch: deploy/staging
-            overlay: deploy/k8s/staging
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: master
+          ref: development
           fetch-depth: 0
       - name: Ensure this is still the newest tested revision
         id: revision
         env:
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+          DEPLOY_SHA: ${{ github.sha }}
         run: |
           if [ "$(git rev-parse HEAD)" = "$DEPLOY_SHA" ]; then
             echo 'promote=true' >> "$GITHUB_OUTPUT"
           else
             echo 'promote=false' >> "$GITHUB_OUTPUT"
-            echo 'A newer revision is already on master; its CI run will promote it.'
+            echo 'A newer revision is already on development; its CI run will promote it.'
           fi
       - name: Pin GitOps images to the tested revision
         if: steps.revision.outputs.promote == 'true'
         env:
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+          DEPLOY_SHA: ${{ github.sha }}
           API_CHANGED: ${{ needs.changes.outputs.api }}
           WEB_CHANGED: ${{ needs.changes.outputs.web }}
-          TARGET_BRANCH: ${{ matrix.branch }}
-          TARGET_OVERLAY: ${{ matrix.overlay }}
-          TARGET_ENVIRONMENT: ${{ matrix.environment }}
+          TARGET_BRANCH: deploy/test
+          TARGET_OVERLAY: deploy/k8s/test
+          TARGET_ENVIRONMENT: test
           IMAGES_CHANGED: ${{ needs.changes.outputs.images }}
         run: |
           if git ls-remote --exit-code --heads origin "refs/heads/${TARGET_BRANCH}" >/dev/null; then
@@ -187,17 +183,23 @@ jobs:
 
           sed -i "/newName: .*\/api$/ { n; s/newTag: .*/newTag: ${api_tag}/; }" "${TARGET_OVERLAY}/kustomization.yaml"
           sed -i "/newName: .*\/web$/ { n; s/newTag: .*/newTag: ${web_tag}/; }" "${TARGET_OVERLAY}/kustomization.yaml"
+      - name: Record tested source
+        if: steps.revision.outputs.promote == 'true'
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        run: printf '%s\n' "$DEPLOY_SHA" > .delivery-source
+      - uses: azure/setup-kubectl@v5
       - name: Validate rendered manifests
         if: steps.revision.outputs.promote == 'true'
         env:
-          TARGET_OVERLAY: ${{ matrix.overlay }}
+          TARGET_OVERLAY: deploy/k8s/test
         run: kubectl kustomize "$TARGET_OVERLAY" > /tmp/bedlam-like-music-gitops.yaml
       - name: Commit the deployment revision
         if: steps.revision.outputs.promote == 'true'
         env:
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-          TARGET_BRANCH: ${{ matrix.branch }}
-          TARGET_ENVIRONMENT: ${{ matrix.environment }}
+          DEPLOY_SHA: ${{ github.sha }}
+          TARGET_BRANCH: deploy/test
+          TARGET_ENVIRONMENT: test
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -207,9 +209,9 @@ jobs:
             exit 0
           fi
           git commit -m "deploy(${TARGET_ENVIRONMENT}): ${DEPLOY_SHA} [skip ci]"
-          # Refuse to promote if master changed while preparing this deployment.
-          if [ "$(git ls-remote origin refs/heads/master | cut -f1)" != "$DEPLOY_SHA" ]; then
-            echo 'A newer master revision exists; skipping promotion.'
+          # Refuse to promote if development changed while preparing this deployment.
+          if [ "$(git ls-remote origin refs/heads/development | cut -f1)" != "$DEPLOY_SHA" ]; then
+            echo 'A newer development revision exists; skipping promotion.'
             exit 0
           fi
           git push origin "HEAD:refs/heads/${TARGET_BRANCH}"

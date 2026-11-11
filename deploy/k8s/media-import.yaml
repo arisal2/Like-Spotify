@@ -3,8 +3,15 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: media-import
-  namespace: bedlam-like-music
+  namespace: bedlam-like-music-test
 spec:
+  nodeSelector:
+    bedlam.io/environment: test
+  tolerations:
+    - key: bedlam.io/environment
+      operator: Equal
+      value: test
+      effect: NoSchedule
   restartPolicy: Never
   automountServiceAccountToken: false
   securityContext:

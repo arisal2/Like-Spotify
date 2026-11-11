@@ -29,13 +29,13 @@ client-visible failure with its server log entry.
 ### Kubernetes
 
 ```bash
-kubectl get application bedlam-like-music -n argocd
-kubectl get pods,jobs,pvc,svc -n bedlam-like-music
-kubectl rollout status deployment/api -n bedlam-like-music
-kubectl rollout status deployment/web -n bedlam-like-music
-kubectl logs deployment/api -n bedlam-like-music --tail=200
-kubectl logs statefulset/mysql -n bedlam-like-music --tail=200
-kubectl get events -n bedlam-like-music --sort-by=.lastTimestamp
+kubectl get application bedlam-like-music-test -n argocd-test
+kubectl get pods,jobs,pvc,svc -n bedlam-like-music-test
+kubectl rollout status deployment/api -n bedlam-like-music-test
+kubectl rollout status deployment/web -n bedlam-like-music-test
+kubectl logs deployment/api -n bedlam-like-music-test --tail=200
+kubectl logs statefulset/mysql -n bedlam-like-music-test --tail=200
+kubectl get events -n bedlam-like-music-test --sort-by=.lastTimestamp
 ```
 
 ### Routine GitOps check
@@ -43,17 +43,16 @@ kubectl get events -n bedlam-like-music --sort-by=.lastTimestamp
 Use this sequence after a merge or when the UI is unavailable:
 
 ```bash
-git ls-remote origin refs/heads/master refs/heads/deploy/local
-kubectl get application bedlam-like-music -n argocd \
+git ls-remote origin refs/heads/development refs/heads/deploy/test
+kubectl get application bedlam-like-music-test -n argocd-test \
   -o custom-columns=SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision
-kubectl get deployment,statefulset,pod,job -n bedlam-like-music
-kubectl get svc web-local -n bedlam-like-music
+kubectl get deployment,statefulset,pod,job -n bedlam-like-music-test
+kubectl get svc web-local -n bedlam-like-music-test
 ```
 
-The `deploy/local` revision and Argo CD's reported revision should converge
+The `deploy/test` revision and test Argo CD's reported revision should converge
 after **Build and promote** completes. A healthy cluster can legitimately lag
-`master` when the merge changed documentation only or when a newer workflow is
-still running.
+`development` while a newer workflow or reconciliation is still running.
 
 Avoid editing Argo-managed workloads with `kubectl edit`, `set image`, or
 long-lived patches. Self-heal will reverse drift; durable changes belong in Git.
@@ -100,14 +99,14 @@ retention-managed backups and automated restore tests.
 
 ## Rollback
 
-The delivery workflow writes immutable commit-SHA image tags to `deploy/local`.
-Prefer reverting the bad change on `master`; once its checks pass, promotion
+The delivery workflow writes immutable commit-SHA image tags to `deploy/test`.
+Prefer reverting the bad change on `development`; once its checks pass, promotion
 produces a new desired state and Argo CD reconciles it.
 
 ```bash
-argocd app history bedlam-like-music
-kubectl rollout history deployment/api -n bedlam-like-music
-kubectl rollout history deployment/web -n bedlam-like-music
+argocd app history bedlam-like-music-test
+kubectl rollout history deployment/api -n bedlam-like-music-test
+kubectl rollout history deployment/web -n bedlam-like-music-test
 ```
 
 Avoid long-lived manual cluster edits because Argo CD self-heal will revert
@@ -120,7 +119,7 @@ state explicit.
   the promoted image tag exists.
 - API unready: inspect MySQL readiness, `app-secrets`, `DATABASE_DSN`, and the
   migration hook logs.
-- Argo `ComparisonError`: verify `deploy/local` exists and the configured path
+- Argo `ComparisonError`: verify `deploy/test` exists and the configured path
   renders with Kustomize.
 - Missing media: verify PVC/bind-mount contents and exact catalog filenames.
 - Login or mutation returns 403: verify `APP_ORIGIN`, HTTPS termination,
@@ -128,12 +127,14 @@ state explicit.
 - App loads but API returns 502: verify API pods/containers and nginx's `api`
   service resolution.
 - Argo CD UI is unavailable: inspect `argocd-server` and `argocd-local` in the
-  `argocd` namespace; the persistent endpoint is a LoadBalancer, not a port
+  `argocd-test` namespace; the persistent endpoint is a LoadBalancer, not a port
   forward.
 
 ## Before public exposure
 
-Do not expose the current local endpoints directly to the internet. Add a
-production ingress or gateway with TLS, real DNS, secure cookies, external
-secret management, shared rate limiting, monitored backups, metrics/traces,
-and an incident-response process first.
+Do not expose the Docker Desktop test endpoints to the internet. Complete the
+[production readiness review](production-readiness-template.md) and bootstrap a
+separate remote production cluster first.
+
+For the current three-node topology and production promotion rules, see
+[deployment environments](deployment-environments.md) and [CI/CD](github-actions.md).

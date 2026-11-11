@@ -1,316 +1,119 @@
-# Local Kubernetes deployment with Argo CD
+# Argo CD on the three-node Docker Desktop cluster
 
-This guide starts with an empty Docker Desktop Kubernetes cluster and ends with
-persistent URLs for the application and Argo CD—no routine port forwarding.
+Two Argo CD instances manage separate application namespaces and workers. This
+uses the official namespace-scoped install, with shared CRDs installed once.
+See the [upstream installation guide](https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/).
 
-| Service           | URL                      |
-| ----------------- | ------------------------ |
-| Bedlam-Like-Music | <http://localhost:8080>  |
-| Argo CD           | <https://localhost:8082> |
+## Bootstrap
 
-Argo CD reads `deploy/k8s/gitops` from `deploy/local`. GitHub Actions creates
-and updates that branch after a successful `master` build, so the cluster pulls
-a tested deployment revision instead of deploying from a developer laptop.
+Requirements: the three Ready Docker Desktop nodes, `kubectl`, `curl`, and Bash.
 
-## How deployment works
+```bash
+kubectl config current-context  # must be docker-desktop
+kubectl get nodes
+bash scripts/bootstrap-cluster.sh
+```
+
+The script pins Argo CD to `v3.6.0`, labels and taints both workers, creates
+namespaces, installs both instances, and grants each instance access to only
+its application namespace. It does not activate application reconciliation.
+
+```bash
+kubectl get pods -n argocd-test -o wide
+kubectl get pods -n argocd-production -o wide
+kubectl auth can-i create deployments -n bedlam-like-music-production \
+  --as=system:serviceaccount:argocd-test:argocd-application-controller
+# Expected: no
+```
+
+| Interface                                | Local URL after LoadBalancer provisioning |
+| ---------------------------------------- | ----------------------------------------- |
+| Test Argo CD                             | <https://localhost:8082>                  |
+| Production Argo CD                       | <https://localhost:8084>                  |
+| Test application, after activation       | <http://localhost:8080>                   |
+| Production application, after activation | <http://localhost:8083>                   |
+
+Inspect `kubectl get service argocd-local -n argocd-test` if the endpoint is not
+available. Docker Desktop must finish provisioning its LoadBalancer. For
+troubleshooting, use `kubectl port-forward -n argocd-test svc/argocd-server
+8082:443` (or production on port 8084).
+
+Login uses `admin` and the generated initial password. Retrieve it locally;
+do not put it into Git, screenshots, or logs:
+
+```bash
+kubectl get secret argocd-initial-admin-secret -n argocd-test \
+  -o jsonpath='{.data.password}' | base64 --decode; printf '\n'
+```
+
+Each instance has a different password. Use username `admin` and the decoded
+password from the namespace matching the URL. The trailing newline prevents
+zsh's `%` prompt marker from appearing beside the password; that marker is not
+part of the password.
+
+On macOS, copy the test password directly without displaying it:
+
+```bash
+kubectl --context docker-desktop get secret argocd-initial-admin-secret -n argocd-test \
+  -o jsonpath='{.data.password}' | base64 --decode | pbcopy
+```
+
+Paste it into <https://localhost:8082>. For <https://localhost:8084>, repeat
+with `argocd-production`. The initial local HTTPS certificate is self-signed;
+the browser may require accepting that certificate before showing the login
+page. Rotate both passwords after initial login.
+
+## Activate applications
+
+First publish and configure the [CI/CD workflows](github-actions.md). Verify
+`deploy/test` contains the reviewed three-node manifests and full SHA image
+tags; an old deployment branch may contain a different topology.
+
+Create separate `app-secrets` Secrets in `bedlam-like-music-test` and
+`bedlam-like-music-production`. Each needs `MYSQL_PASSWORD`,
+`MYSQL_ROOT_PASSWORD`, and `DATABASE_DSN`. The DSN format is:
 
 ```text
-pull request → CI → merge to master → CI → build changed images in GHCR
-                                               ↓
-                                      update deploy/local
-                                               ↓
-Docker Desktop cluster ← Argo CD detects and syncs the desired state
+bedlam_like_music:<environment-password>@tcp(mysql:3306)/bedlam_like_music?parseTime=true
 ```
 
-Docker Desktop publishes the two LoadBalancer services on the host. That is why
-the endpoints remain available without `kubectl port-forward`.
-
-## 1. Prerequisites
-
-- Docker Desktop with Kubernetes enabled.
-- `kubectl`, Git, and repository access.
-- A successful promotion so `deploy/local` and its GHCR images exist.
-- Licensed audio and artwork if media playback is required.
-
-The Argo CD CLI is optional; bootstrap uses `kubectl`.
-
-Confirm the target before changing anything:
+Use distinct generated passwords. Create Secrets from a protected local file
+or a secret manager, and never commit that file. For private GHCR packages,
+configure image-pull credentials in each environment before synchronization.
 
 ```bash
-kubectl config get-contexts
-kubectl config use-context docker-desktop
-kubectl cluster-info
-kubectl get nodes
-```
-
-Stop if the current context is not `docker-desktop`.
-
-## 2. Verify the deployment branch
-
-```bash
-git ls-remote --exit-code --heads origin refs/heads/deploy/local
-git fetch origin deploy/local
-git show origin/deploy/local:deploy/k8s/gitops/kustomization.yaml
-```
-
-The image `newTag` values should be full commit SHAs, not `main`. If the branch
-does not exist, merge an application or deployment change into `master`, then
-wait for **Test and package** and **Build and promote**. Documentation-only
-merges do not promote because no runtime component changed.
-
-## 3. Install Argo CD
-
-The local setup is documented against pinned Argo CD `v3.6.0`. Review upstream
-upgrade notes before changing it.
-
-```bash
-kubectl create namespace argocd
-kubectl apply -n argocd --server-side --force-conflicts \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.0/manifests/install.yaml
-kubectl wait --for=condition=Available deployment/argocd-server \
-  -n argocd --timeout=300s
-kubectl get pods -n argocd
-```
-
-This official non-HA install is suitable for a single-node development cluster,
-not production. The versioned URL prevents an unexpected future upgrade.
-
-## 4. Create runtime secrets
-
-GitOps intentionally contains no credentials. Create the namespace and Secret
-before the first successful sync:
-
-```bash
-kubectl create namespace bedlam-like-music --dry-run=client -o yaml | kubectl apply -f -
-kubectl create secret generic app-secrets -n bedlam-like-music \
-  --from-literal=MYSQL_PASSWORD='<app-password>' \
-  --from-literal=MYSQL_ROOT_PASSWORD='<root-password>' \
-  --from-literal=DATABASE_DSN='bedlam_like_music:<app-password>@tcp(mysql:3306)/bedlam_like_music?parseTime=true'
-```
-
-`MYSQL_PASSWORD` and the password in `DATABASE_DSN` must match. Use a DSN-safe
-password or percent-encode reserved characters. Do not commit real values or
-leave them in shared shell history.
-
-Optional AI settings can be included as `OPENAI_API_KEY` and `OPENAI_MODEL`.
-Recreate the complete Secret with `--dry-run=client -o yaml | kubectl apply -f -`
-when adding keys; do not print the existing Secret. Production deployments
-should use an encrypted or external secret workflow.
-
-## 5. Handle private GHCR packages
-
-Skip this section when the API and web packages are public. Private packages
-need a read-only GitHub package token:
-
-```bash
-kubectl create secret docker-registry ghcr-pull -n bedlam-like-music \
-  --docker-server=ghcr.io \
-  --docker-username='<github-user>' \
-  --docker-password='<read-packages-token>'
-```
-
-The current workloads do not reference `ghcr-pull` automatically. Add
-`imagePullSecrets` to the service account or pod specifications in Git and let
-the promotion workflow update `deploy/local`. Do not rely on a permanent,
-undocumented cluster-only patch.
-
-## 6. Bootstrap the Argo CD application
-
-Run from the repository root:
-
-```bash
-kubectl kustomize deploy/argocd
 kubectl apply -k deploy/argocd
-kubectl get appproject,application -n argocd
+kubectl get application -n argocd-test
 ```
 
-This installs:
-
-- `AppProject/bedlam-like-music`, restricting source, destination, and resource
-  types.
-- `Application/bedlam-like-music`, watching `deploy/local` at
-  `deploy/k8s/gitops` with automatic sync, pruning, and self-healing.
-- `Service/argocd-local`, publishing Argo CD on host port 8082.
-
-Wait for reconciliation:
+After test is Synced and Healthy, verify sign-in, catalog, playback, and
+persistence. Approve production only after validating that exact test revision.
+Once `deploy/production` has been created by promotion:
 
 ```bash
-kubectl get application bedlam-like-music -n argocd -w
-kubectl get pods,jobs,pvc,svc -n bedlam-like-music
+kubectl apply -k deploy/argocd/production-template
+kubectl get application -n argocd-production
 ```
 
-Stop the watch after Sync is `Synced` and Health is `Healthy`. The first sync
-can take several minutes while Docker Desktop downloads images.
+The `production-template` directory name is retained for compatibility; it now
+contains the second local instance's application and project configuration.
 
-## 7. Import media
+## Media and storage
 
-The GitOps overlay creates a `media` PVC and mounts it read-only in the API.
-After it is Bound, copy permitted media through the disposable import pod:
+The default local-path storage class uses `WaitForFirstConsumer`, so claims
+bind on the selected worker. Application media and database volumes are
+separate for test and production. Verify placement with `kubectl get pods -n
+bedlam-like-music-test -o wide` and repeat for production.
 
-```bash
-kubectl wait --for=jsonpath='{.status.phase}'=Bound \
-  persistentvolumeclaim/media -n bedlam-like-music --timeout=180s
-kubectl apply -f deploy/k8s/media-import.yaml
-kubectl wait --for=condition=Ready pod/media-import \
-  -n bedlam-like-music --timeout=180s
-kubectl cp assets/. bedlam-like-music/media-import:/media
-kubectl delete pod media-import -n bedlam-like-music
-```
+For test media import, use `deploy/k8s/media-import.yaml`. Its selector and
+toleration target the test worker. For a production import, change its namespace,
+selector, and toleration to production in a temporary copy. Delete only the
+utility pod after importing; retain the PVC.
 
-Expected paths are `music/` and `images/artwork/`, with filenames from
-`backend/internal/catalog/songs.json`. Keep a backup outside Docker Desktop;
-resetting its cluster can destroy local volumes.
+## Recovery and upgrades
 
-## 8. Sign in and verify
-
-Open <https://localhost:8082>. The initial username is `admin`. Retrieve the
-one-time password without writing it to disk:
-
-```bash
-kubectl -n argocd get secret argocd-initial-admin-secret \
-  -o jsonpath='{.data.password}' | base64 --decode
-printf '\n'
-```
-
-Change it after signing in. The local generated certificate may cause a browser
-warning.
-
-Verify both persistent endpoints:
-
-```bash
-kubectl get svc web-local -n bedlam-like-music
-kubectl get svc argocd-local -n argocd
-curl --fail http://localhost:8080/health/web
-curl --fail http://localhost:8080/api/v1/catalog
-```
-
-The API is reached through the web service at `/api`; it is not independently
-published by the GitOps overlay.
-
-## 9. Deploy future changes
-
-Normal releases use GitOps, not `kubectl set image`:
-
-1. Open a feature-branch pull request to `master`.
-2. Wait for the required `ci-gate` and review, then merge.
-3. Wait for the `master` **Test and package** run.
-4. Wait for **Build and promote** to publish changed images and update
-   `deploy/local`.
-5. Watch Argo CD sync the branch revision.
-
-```bash
-kubectl get application bedlam-like-music -n argocd -w
-kubectl rollout status deployment/api -n bedlam-like-music --timeout=300s
-kubectl rollout status deployment/web -n bedlam-like-music --timeout=300s
-```
-
-Unchanged components retain their immutable tags. Documentation-only changes
-publish no image and produce no cluster promotion.
-
-## Manual pre-merge smoke test
-
-This path renders and applies local manifests before a merge. It is not a
-replacement for Argo CD and uses local image names:
-
-```bash
-cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
-# Edit secrets.env; MYSQL_PASSWORD and the DSN password must match.
-kubectl apply -k deploy/k8s/local
-kubectl apply -f deploy/k8s/migration-job.yaml
-```
-
-First build images named `bedlam-like-music-api:local` and
-`bedlam-like-music-web:local` into Docker Desktop's image store. Never commit
-`deploy/k8s/local/secrets.env`; Git ignores it. Remove manually applied
-resources before returning to the GitOps deployment to avoid ownership
-confusion.
-
-## Upgrade Argo CD
-
-1. Read release and upgrade notes from the installed version to the target.
-2. Confirm desired configuration is in Git and data backups are current.
-3. Apply the target's pinned official install manifest.
-4. Wait for all Argo deployments and verify Bedlam-Like-Music remains Synced and Healthy.
-5. Update the pinned version in this guide in the same pull request.
-
-```bash
-kubectl get deploy -n argocd
-kubectl get application bedlam-like-music -n argocd
-```
-
-## Troubleshooting
-
-### Revision not found
-
-Confirm remote `deploy/local` exists and **Build and promote** succeeded. A
-documentation-only merge does not create a promotion.
-
-### Application is OutOfSync or Degraded
-
-```bash
-kubectl describe application bedlam-like-music -n argocd
-kubectl get events -n bedlam-like-music --sort-by=.lastTimestamp
-kubectl get pods,jobs -n bedlam-like-music
-```
-
-Inspect the first failing resource rather than repeatedly forcing a sync.
-
-### ImagePullBackOff
-
-Check the exact SHA tag in `deploy/local`, GHCR visibility, node architecture,
-and configured pull credentials.
-
-### Migration failed
-
-```bash
-kubectl get jobs -n bedlam-like-music
-kubectl logs job/migrate -n bedlam-like-music
-kubectl describe secret app-secrets -n bedlam-like-music
-```
-
-Do not print Secret values. Confirm that the database password and DSN agree.
-
-### Local endpoints do not open
-
-```bash
-kubectl get svc web-local -n bedlam-like-music
-kubectl get svc argocd-local -n argocd
-kubectl describe svc web-local -n bedlam-like-music
-```
-
-Both services should be `LoadBalancer`. If the external address stays pending,
-confirm Docker Desktop Kubernetes supports LoadBalancer services. Port
-forwarding can diagnose the service but should not be required normally.
-
-### Media is missing
-
-Confirm the `media` PVC is Bound and inspect the import pod and exact catalog
-filenames. Argo CD manages the PVC declaration, not its content.
-
-## Teardown
-
-Export database and media backups first. The Application has a resources
-finalizer, so deleting it can prune managed resources.
-
-```bash
-kubectl delete -k deploy/argocd
-kubectl delete namespace bedlam-like-music
-kubectl delete namespace argocd
-```
-
-This can delete MySQL and media PVC data. Git and GHCR can recreate workloads,
-but cannot recreate user data or media.
-
-## Production boundary
-
-This setup is for a trusted local machine. Before internet exposure, use a
-production ingress or gateway, real DNS and TLS, secure cookies, external
-secrets, SSO and restricted Argo access, enforced network policies, monitored
-encrypted backups, and an incident-response process.
-
-## References
-
-- [Argo CD getting started](https://argo-cd.readthedocs.io/en/latest/getting_started/)
-- [Argo CD releases](https://github.com/argoproj/argo-cd/releases)
-- [GitHub Actions and GitOps setup](github-actions.md)
-- [Operations and recovery](operations.md)
+Keep the bootstrap version pinned. Review upstream upgrade notes and take
+backups before changing it, then rerun bootstrap and verify both installations.
+Never delete application namespaces or PVCs as a troubleshooting shortcut.
+See [operations](operations.md) for recovery and rollback, and
+[environment limits](deployment-environments.md) before external deployment.

@@ -40,3 +40,10 @@ and canonical server rendering remain outside this prototype.
 - Consequences:
 - Follow-up tasks:
 ```
+
+## DEC-011: Three-node local delivery topology
+
+- Status: Approved
+- Date: 2026-11-10
+- Producer decision: One Docker Desktop control plane, one test worker, and one production worker; separate namespaces and two Argo CD instances. Create development and main source branches.
+- Consequences: Dedicated scheduling and namespace RBAC; shared host/control-plane failure domain. Production promotion reuses the test image set. Public production hosting remains outside this local topology.

@@ -12,7 +12,8 @@ Use this page as the entry point for operating and changing Bedlam-Like-Music.
 | [Operations](operations.md)                              | inspect health, logs, backups, recovery, and rollbacks         |
 | [Argo CD](argo-cd.md)                                    | install the local Kubernetes and Argo CD deployment            |
 | [GitHub Actions](github-actions.md)                      | configure CI, promotion, and branch protection                 |
-| [Deployment environments](deployment-environments.md)    | promote immutable staging releases into protected production   |
+| [Deployment environments](deployment-environments.md)    | deploy to test before protected remote production              |
+| [Production readiness](production-readiness-template.md) | review every launch gate, owner, and evidence item             |
 | [Security policy](../SECURITY.md)                        | report vulnerabilities and review the deployment baseline      |
 
 ## Choose a path
@@ -44,5 +45,6 @@ Use these guides in order for a new machine:
    and incident diagnosis.
 
 `deploy/k8s/local` is a manual pre-merge smoke-test overlay.
-`deploy/k8s/gitops` on `deploy/local` is the desired state used by Argo CD.
+`deploy/k8s/test` on `deploy/test` is the Docker Desktop desired state.
+Production has a separate remote-cluster template and readiness review.
 Do not operate both as competing deployment methods.
