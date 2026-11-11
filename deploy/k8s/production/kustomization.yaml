@@ -14,6 +14,10 @@ images:
 patches:
   - path: config-patch.yaml
   - path: scale-patch.yaml
+  - path: observability-api-ingress-patch.yaml
+    target:
+      kind: NetworkPolicy
+      name: api
   - target:
       kind: Namespace
     patch: |-
