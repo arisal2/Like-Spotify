@@ -492,7 +492,8 @@ The static catalog is not sufficient for Studio projects, but its separation fro
 - Kubernetes manifests with health probes, restricted security contexts, service accounts, persistent claims, and network policies.
 - Change-aware GitHub Actions for Go, frontend, browser, manifest, security, and image checks.
 - Multi-architecture image publishing with immutable commit tags.
-- Argo CD reconciliation through the automation-owned `deploy/local` branch.
+- Argo CD reconciliation through the automation-owned `deploy/test` and
+  `deploy/production` branches.
 - Local persistent application and Argo CD endpoints without routine port forwarding.
 - Documentation for secrets, media import, backup, rollback, troubleshooting, and cluster recovery.
 
