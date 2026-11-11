@@ -4,13 +4,6 @@ resources:
   - ../base
   - migration-job.yaml
   - media-pvc.yaml
-images:
-  - name: bedlam-like-music-api:local
-    newName: ghcr.io/arisal2/bedlam-like-music/api
-    newTag: main
-  - name: bedlam-like-music-web:local
-    newName: ghcr.io/arisal2/bedlam-like-music/web
-    newTag: main
 patches:
   - target:
       group: apps

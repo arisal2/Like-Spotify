@@ -5,4 +5,7 @@ metadata:
 data:
   APP_ORIGIN: http://localhost:8083
   COOKIE_SECURE: 'false'
-  APP_ENV: production
+  # Docker Desktop is a production-flow rehearsal, not a public HTTPS
+  # production cluster. The real production template must use production,
+  # HTTPS, and secure cookies before it can start.
+  APP_ENV: production-rehearsal
