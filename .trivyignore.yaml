@@ -11,3 +11,13 @@ misconfigurations:
       only to the matching environment's Argo CD controller and server, never
       application service accounts. Cross-environment access is denied and was
       verified with kubectl auth can-i. Review this exception when RBAC changes.
+  - id: KSV-0112
+    paths:
+      - deploy/cluster/environment-rbac.yaml
+    expired_at: 2027-02-10
+    statement: >-
+      Argo CD must list and watch namespaced resource kinds to build its live
+      state cache before reconciling. This grants read-only discovery inside one
+      environment namespace; separate explicit rules limit all mutations to
+      application resources. The RoleBinding never grants cross-namespace or
+      cluster-wide access. Review this exception when RBAC changes.

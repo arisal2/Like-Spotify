@@ -6,7 +6,7 @@ The approved local topology is one Docker Desktop cluster with three nodes.
 | -------------------- | ----------------------- | ------------------------------ | ------------------- | ------------- | ------------------- |
 | Control plane        | `desktop-control-plane` | —                              | —                   | —             | —                   |
 | Test                 | `desktop-worker`        | `bedlam-like-music-test`       | `argocd-test`       | `development` | `deploy/test`       |
-| Production rehearsal | `desktop-worker2`       | `bedlam-like-music-production` | `argocd-production` | `main`        | `deploy/production` |
+| Production rehearsal | `desktop-worker2`       | `bedlam-like-music-production` | `argocd-production` | `master`      | `deploy/production` |
 
 Both workers have a `bedlam.io/environment` label and matching `NoSchedule`
 taint. Every application Deployment, StatefulSet, and migration Job has a
