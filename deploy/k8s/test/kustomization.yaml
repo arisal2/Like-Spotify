@@ -13,6 +13,10 @@ images:
     newTag: development
 patches:
   - path: config-patch.yaml
+  - path: observability-api-ingress-patch.yaml
+    target:
+      kind: NetworkPolicy
+      name: api
   - target:
       kind: Namespace
     patch: |-
