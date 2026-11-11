@@ -5,6 +5,12 @@ metadata:
   name: argocd-workloads
   namespace: bedlam-like-music-ENVIRONMENT
 rules:
+  # Argo's cache discovers every namespaced resource type before comparison.
+  # Read access stays inside this Role's one workload namespace; mutation
+  # remains limited by the narrower rules below.
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: [get, list, watch]
   - apiGroups: ['']
     resources: [configmaps, services, serviceaccounts, persistentvolumeclaims, pods, events]
     verbs: [get, list, watch, create, update, patch, delete]
