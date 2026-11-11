@@ -2,20 +2,33 @@ name: Build and promote
 
 on:
   workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      source_branch:
+        required: true
+        type: string
+      target_branch:
+        required: true
+        type: string
+      target_overlay:
+        required: true
+        type: string
 
 permissions:
   contents: write
   packages: write
 
 concurrency:
-  group: gitops-test
+  group: gitops-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
   changes:
     if: >-
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/development'
+      github.ref == format('refs/heads/{0}', inputs.source_branch)
     runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.paths.outputs.api }}
@@ -39,9 +52,9 @@ jobs:
           # Compare against the last published source, covering failed/skipped runs
           # and multi-commit pushes. A new deployment branch builds both images.
           base=$(git hash-object -t tree /dev/null)
-          if git ls-remote --exit-code --heads origin refs/heads/deploy/test >/dev/null; then
-            git fetch origin refs/heads/deploy/test:refs/remotes/origin/deploy/test
-            candidate=$(git show refs/remotes/origin/deploy/test:.delivery-source 2>/dev/null || true)
+          if git ls-remote --exit-code --heads "refs/heads/${{ inputs.target_branch }}" >/dev/null; then
+            git fetch origin "refs/heads/${{ inputs.target_branch }}:refs/remotes/origin/${{ inputs.target_branch }}"
+            candidate=$(git show "refs/remotes/origin/${{ inputs.target_branch }}:.delivery-source" 2>/dev/null || true)
             if [[ "$candidate" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${candidate}^{commit}"; then
               base="$candidate"
             fi
@@ -108,7 +121,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:${{ github.sha }}
-            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:development
+            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:${{ inputs.environment }}
           provenance: mode=max
           sbom: true
           cache-from: type=gha,scope=${{ matrix.component }}-arm64
@@ -125,7 +138,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: development
+          ref: ${{ inputs.source_branch }}
           fetch-depth: 0
       - name: Ensure this is still the newest tested revision
         id: revision
@@ -136,7 +149,7 @@ jobs:
             echo 'promote=true' >> "$GITHUB_OUTPUT"
           else
             echo 'promote=false' >> "$GITHUB_OUTPUT"
-            echo 'A newer revision is already on development; its CI run will promote it.'
+            echo 'A newer source revision is already available; its CI run will promote it.'
           fi
       - name: Pin GitOps images to the tested revision
         if: steps.revision.outputs.promote == 'true'
@@ -144,9 +157,9 @@ jobs:
           DEPLOY_SHA: ${{ github.sha }}
           API_CHANGED: ${{ needs.changes.outputs.api }}
           WEB_CHANGED: ${{ needs.changes.outputs.web }}
-          TARGET_BRANCH: deploy/test
-          TARGET_OVERLAY: deploy/k8s/test
-          TARGET_ENVIRONMENT: test
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          TARGET_OVERLAY: ${{ inputs.target_overlay }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
           IMAGES_CHANGED: ${{ needs.changes.outputs.images }}
         run: |
           if git ls-remote --exit-code --heads origin "refs/heads/${TARGET_BRANCH}" >/dev/null; then
@@ -159,11 +172,7 @@ jobs:
             git read-tree --reset -u "$DEPLOY_SHA"
           else
             git switch -c "promote-${TARGET_ENVIRONMENT}"
-            if [ "$TARGET_BRANCH" != 'deploy/local' ] && git ls-remote --exit-code --heads origin refs/heads/deploy/local >/dev/null; then
-              git fetch origin refs/heads/deploy/local:refs/remotes/origin/deploy/local
-              previous_api=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/api$/ { getline; if ($1 == "newTag:") print $2 }')
-              previous_web=$(git show refs/remotes/origin/deploy/local:deploy/k8s/gitops/kustomization.yaml | awk '/newName: .*\/web$/ { getline; if ($1 == "newTag:") print $2 }')
-            elif [ "$IMAGES_CHANGED" = 'true' ] && [ "$API_CHANGED" = 'true' ] && [ "$WEB_CHANGED" = 'true' ]; then
+            if [ "$IMAGES_CHANGED" = 'true' ] && [ "$API_CHANGED" = 'true' ] && [ "$WEB_CHANGED" = 'true' ]; then
               previous_api="$DEPLOY_SHA"
               previous_web="$DEPLOY_SHA"
             else
@@ -192,14 +201,14 @@ jobs:
       - name: Validate rendered manifests
         if: steps.revision.outputs.promote == 'true'
         env:
-          TARGET_OVERLAY: deploy/k8s/test
+          TARGET_OVERLAY: ${{ inputs.target_overlay }}
         run: kubectl kustomize "$TARGET_OVERLAY" > /tmp/bedlam-like-music-gitops.yaml
       - name: Commit the deployment revision
         if: steps.revision.outputs.promote == 'true'
         env:
           DEPLOY_SHA: ${{ github.sha }}
-          TARGET_BRANCH: deploy/test
-          TARGET_ENVIRONMENT: test
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -209,8 +218,8 @@ jobs:
             exit 0
           fi
           git commit -m "deploy(${TARGET_ENVIRONMENT}): ${DEPLOY_SHA} [skip ci]"
-          # Refuse to promote if development changed while preparing this deployment.
-          if [ "$(git ls-remote origin refs/heads/development | cut -f1)" != "$DEPLOY_SHA" ]; then
+          # Refuse to promote if the source branch changed while preparing this deployment.
+          if [ "$(git ls-remote origin "refs/heads/${{ inputs.source_branch }}" | cut -f1)" != "$DEPLOY_SHA" ]; then
             echo 'A newer development revision exists; skipping promotion.'
             exit 0
           fi

@@ -1,104 +1,61 @@
-# GitHub Actions and GitOps
+# GitHub Actions and GitOps setup
 
-## Branch and promotion model
+This repository is a local deployment-practice lab with two source branches and
+two automation-owned GitOps branches:
 
 ```text
-feature → PR → development → CI → changed images → deploy/test → test Argo CD
-                   │
-                   └── verified in test → PR → main → CI → production approval
-                                                        → deploy/production
-                                                        → production Argo CD
+feature → PR → development → CI → deploy/test → test Argo CD
+                    │
+                    └── verify test → PR → master → CI → deploy/production
+                                                        → production-rehearsal Argo CD
 ```
 
-`development` and `main` are source branches. `deploy/test` and
-`deploy/production` are automation-owned desired-state branches. Retain
-`master` until migration is complete; creating the new branches does not
-publish uncommitted workflow changes.
+| Source branch | GitOps branch       | Kustomize overlay       | Local endpoint          |
+| ------------- | ------------------- | ----------------------- | ----------------------- |
+| `development` | `deploy/test`       | `deploy/k8s/test`       | `http://localhost:8080` |
+| `master`      | `deploy/production` | `deploy/k8s/production` | `http://localhost:8083` |
+
+`deploy/test` and `deploy/production` are automation-owned desired-state
+branches. Do not develop or merge feature work directly into them.
 
 ## Required repository configuration
 
-Before enabling delivery:
+1. Protect `development` and `master`: require pull requests and the
+   `ci-gate` check; block force pushes and deletion.
+2. Allow Actions to write repository contents and GHCR packages so delivery
+   can update the two GitOps branches.
+3. Do not protect the GitOps branches in a way that blocks
+   `github-actions[bot]`; prohibit ordinary direct pushes instead.
+4. Make GHCR packages readable from Docker Desktop, or configure scoped image
+   pull secrets for both application namespaces.
 
-1. Development CI calls the delivery workflow from the same revision after
-   `ci-gate` succeeds; test delivery does not depend on the default branch.
-   Before enabling production, publish the reviewed production workflow to
-   `main` and set the default branch to `main`; its `workflow_run` trigger
-   requires the workflow on the default branch.
-2. Protect `development` and `main`: require pull requests and `ci-gate`, block
-   force pushes and deletion, and restrict bypass permissions.
-3. Create the GitHub environment `production`, require a reviewer, prevent
-   self-review, and restrict permitted deployment branches to `main`. An
-   `environment:` declaration alone does not configure reviewers.
-4. Allow the delivery workflows to write repository contents and GHCR packages.
-   Make the image packages readable by the cluster, or configure pull secrets
-   separately in each application namespace.
-5. Merge to `development`, verify test reconciliation and smoke tests, then
-   promote the same source tree to `main` through a reviewed PR.
+## Delivery behavior
 
-GitHub-hosted runners do not need network access to Docker Desktop. They push
-images and Git state; local Argo CD pulls both. The production reviewer must
-verify the exact test GitOps revision is Synced and Healthy and that smoke
-tests pass. CI success alone does not attest to local cluster health.
+After a successful push CI run, delivery compares the source revision with the
+`.delivery-source` marker in that environment’s last GitOps revision. It builds
+only API or web images whose source changed; unchanged components retain their
+previous immutable commit-SHA tag. Each delivery writes the complete desired
+state and records the tested source revision.
 
-## Checks and build selection
+The Docker Desktop workers are ARM64. Delivery uses an ARM64 runner and
+publishes `linux/arm64` images. Pull-request container validation remains a
+separate AMD64 build check.
 
-CI selects Go, frontend, browser, Kubernetes, and security checks by changed
-paths. Browser tests run Go and Vite natively with a MySQL service and a
-generated WAV file; they do not require Compose image builds. Container
-validation runs on affected pull requests. Post-merge delivery builds and
-publishes affected components after CI succeeds.
+## Before the next feature
 
-Delivery compares the source with `.delivery-source` on the last successful
-`deploy/test` revision. This covers multiple commits and changes from earlier
-failed or superseded runs. A missing baseline builds both images. Every
-successful source revision is recorded, even when existing images are reused.
+1. Merge feature work into `development`.
+2. Confirm `deploy/test` is Synced and Healthy in test Argo CD, then smoke-test
+   `http://localhost:8080`.
+3. Merge the reviewed change from `development` into `master`.
+4. Confirm `deploy/production` is Synced and Healthy in production-rehearsal
+   Argo CD, then smoke-test `http://localhost:8083`.
 
-| Change                                                | Publication work                        |
-| ----------------------------------------------------- | --------------------------------------- |
-| Backend only                                          | Build API; reuse deployed web tag       |
-| Frontend only                                         | Build web; reuse deployed API tag       |
-| Documentation only                                    | Reuse both images; record tested source |
-| Deployment only                                       | Reuse images; update manifests          |
-| Build workflow, build scripts, or Docker ignore rules | Rebuild both images                     |
+CI success verifies the build and tests; it does not by itself verify local
+Argo reconciliation. Use the application and endpoint checks above.
 
-The Docker Desktop nodes are ARM64. Delivery uses a native ARM64 runner and
-publishes `linux/arm64`, avoiding a second architecture build and emulation.
-PR image validation uses AMD64 with a separate cache. Restore multi-architecture
-publication when an actual AMD64 deployment target is introduced.
+## Dependency protection
 
-Dependency layers and GitHub Actions BuildKit caches are retained. Production
-promotion does not rebuild: it copies the exact test image tags. These are full
-source-commit tags, not cryptographically immutable digest pins; do not overwrite
-published SHA tags. Digest-based promotion remains a hardening follow-up.
-
-No before/after build-duration benchmark has been collected. The changes remove
-specific duplicated work; elapsed-time improvements need measurement after the
-updated workflows run.
-
-## Production promotion
-
-A successful push CI run on `main` starts promotion through the `production`
-environment. The job refuses promotion unless the current main tree equals the
-source recorded in the selected test revision. It captures that test GitOps
-revision, copies its image set, validates manifests, and rejects a stale main
-revision before pushing. Moving test ahead of main can require retesting the
-intended source; the workflow does not silently select an older test revision.
-
-Manual recovery is available through **Promote production** on `main`, with
-`test_gitops_sha` set to the verified current head of `deploy/test`. The same
-source-equality and environment rules apply.
-
-A workflow-level concurrency group serializes each environment's writes.
-Git pushes remain non-forced. Production approval rules and a successful live
-smoke test are required before treating this as operational delivery.
-
-## Deployment-controller scan exception
-
-Trivy rule `KSV-0056` flags the networking write permissions required by Argo
-CD to reconcile Services and NetworkPolicies. `.trivyignore.yaml` limits this
-exception to `deploy/cluster/environment-rbac.yaml`, with a review expiry of
-2027-02-10. The role remains namespace-scoped and bound only to the matching
-Argo CD controller and server. Application identities receive no such grant.
-Other files, rules, vulnerability findings, and secret findings remain gated.
-Review the exception and cross-environment authorization checks whenever this
-RBAC changes; do not extend it to application roles.
+Pull requests run dependency review, npm audit, `govulncheck`, and Trivy.
+Dependabot tracks Go, npm, Docker, and GitHub Actions dependencies. The two
+official MIT-licensed Actions with missing dependency-graph license metadata
+are package-specific exceptions; do not broaden that allow-list.

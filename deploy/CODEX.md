@@ -9,7 +9,7 @@ Read the repository-root `CODEX.md` first.
   state reconciled by the Docker Desktop test Argo CD installation.
 - Production uses the dedicated second worker in the same Docker Desktop cluster.
   Separate namespace-scoped Argo CD instances manage test and production.
-  `development` feeds test; `main` promotes the verified test images without rebuilding.
+  `development` feeds test; `master` promotes the verified test images without rebuilding.
 - CI publishes immutable images; Argo CD deploys declared state. Do not make
   long-lived manual cluster patches.
 
