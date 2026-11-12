@@ -40,4 +40,19 @@ describe("synth patch persistence", () => {
 			synthPatchSchema.safeParse({ ...defaultSynthPatch, release: -1 }).success,
 		).toBe(false);
 	});
+	it("keeps existing saved patches and supplies safe defaults for new controls", () => {
+		const old = {
+			version: 1,
+			waveform: "square",
+			cutoff: 900,
+			attack: 0.1,
+			release: 0.3,
+			volume: 0.1,
+		};
+		const restored = readSynthPatch({ getItem: () => JSON.stringify(old) });
+		expect(restored.waveform).toBe("square");
+		expect(restored.cutoff).toBe(900);
+		expect(restored.oscMix).toBe(0);
+		expect(restored.sustain).toBe(1);
+	});
 });

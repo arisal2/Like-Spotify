@@ -8,6 +8,8 @@ import {
 	type Sample,
 } from "../audio/sampleStore";
 import { SynthStudio } from "./SynthStudio";
+import { SoundMatcher } from "./SoundMatcher";
+import { SampleEditor } from "./SampleEditor";
 import "./sampleStudio.css";
 
 const maxBytes = 20 * 1024 * 1024;
@@ -15,6 +17,17 @@ export function SampleStudio() {
 	const [samples, setSamples] = useState<Sample[]>([]);
 	const [album, setAlbum] = useState("My first album");
 	const [newAlbum, setNewAlbum] = useState("");
+	const [editorInput, setEditorInput] = useState<{
+		audio: Blob;
+		name: string;
+	} | null>(null);
+	const [theme, setTheme] = useState(() => {
+		try {
+			return localStorage.getItem("bedlam.theme") ?? "moss";
+		} catch {
+			return "moss";
+		}
+	});
 	const navigate = useNavigate();
 	const view = useLocation().pathname === "/studio/synth" ? "synth" : "samples";
 	const [status, setStatus] = useState("Loading your library…");
@@ -114,7 +127,7 @@ export function SampleStudio() {
 		}
 	}
 	return (
-		<div className="sample-app">
+		<div className="sample-app" data-theme={theme}>
 			<aside className="sample-sidebar">
 				<div className="sample-brand">
 					BEDLAM <span>STUDIO</span>
@@ -129,11 +142,35 @@ export function SampleStudio() {
 					</button>
 					<button
 						className={view === "synth" ? "selected" : ""}
-						onClick={() => { mixer.current?.stop(); navigate("/studio/synth"); }}
+						onClick={() => {
+							mixer.current?.stop();
+							navigate("/studio/synth");
+						}}
 					>
 						Synthesizer
 					</button>
 				</nav>
+				<label className="theme-picker">
+					Theme
+					<select
+						aria-label="Theme"
+						value={theme}
+						onChange={(event) => {
+							const value = event.target.value;
+							setTheme(value);
+							try {
+								localStorage.setItem("bedlam.theme", value);
+							} catch {
+								/* Theme remains active for this session. */
+							}
+						}}
+					>
+						<option value="moss">Moss</option>
+						<option value="cyberpunk">Cyberpunk</option>
+						<option value="retro">Retro</option>
+						<option value="ocean">Ocean</option>
+					</select>
+				</label>
 				<div className="sample-note">
 					Your sounds live on this browser. Keep a copy of your original files.
 				</div>
@@ -165,6 +202,44 @@ export function SampleStudio() {
 								/>
 							</label>
 						</header>
+						<SoundMatcher
+							onEdit={(recording) =>
+								setEditorInput({ audio: recording, name: "Recording" })
+							}
+							onSave={async (recording) => {
+								const sample: Sample = {
+									id: crypto.randomUUID(),
+									name: `Recording ${new Date().toLocaleString()}`,
+									album,
+									audio: recording,
+									volume: 0.7,
+									pan: 0,
+									muted: false,
+								};
+								await saveSample(sample);
+								setSamples((old) => [...old, sample]);
+							}}
+						/>
+						{editorInput && (
+							<SampleEditor
+								key={editorInput.name + String(editorInput.audio.size)}
+								input={editorInput}
+								onClose={() => setEditorInput(null)}
+								onSave={async (audio, name) => {
+									const sample: Sample = {
+										id: crypto.randomUUID(),
+										name: `${name.replace(/\.wav$/i, "")}.wav`,
+										album,
+										audio,
+										volume: 0.7,
+										pan: 0,
+										muted: false,
+									};
+									await saveSample(sample);
+									setSamples((old) => [...old, sample]);
+								}}
+							/>
+						)}
 						<section className="sample-section">
 							<div className="sample-section-title">
 								<div>
@@ -252,6 +327,18 @@ export function SampleStudio() {
 												<span>♪</span>
 												<strong>{sample.name}</strong>
 											</div>
+											<button
+												onClick={() => {
+													mixer.current?.stop();
+													setEditorInput({
+														audio: sample.audio,
+														name: sample.name,
+													});
+												}}
+												aria-label={`Edit ${sample.name}`}
+											>
+												Edit
+											</button>
 											<button
 												onClick={() => void play([{ ...sample, muted: false }])}
 												aria-label={`Play ${sample.name}`}
