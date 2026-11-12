@@ -45,33 +45,27 @@ jobs:
         name: Select images and promotion from changed paths
         shell: bash
         run: |
-          api=false
-          web=false
-          deploy=false
-
           # Compare against the last published source, covering failed/skipped runs
           # and multi-commit pushes. A new deployment branch builds both images.
           base=$(git hash-object -t tree /dev/null)
-          if git ls-remote --exit-code --heads "refs/heads/${{ inputs.target_branch }}" >/dev/null; then
+          bootstrap=true
+          remote_status=0
+          git ls-remote --exit-code --heads origin "refs/heads/${{ inputs.target_branch }}" >/dev/null || remote_status=$?
+          if [ "$remote_status" -eq 0 ]; then
             git fetch origin "refs/heads/${{ inputs.target_branch }}:refs/remotes/origin/${{ inputs.target_branch }}"
             candidate=$(git show "refs/remotes/origin/${{ inputs.target_branch }}:.delivery-source" 2>/dev/null || true)
             if [[ "$candidate" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "${candidate}^{commit}"; then
               base="$candidate"
+              bootstrap=false
             fi
+          elif [ "$remote_status" -ne 2 ]; then
+            echo "Cannot inspect the GitOps branch; refusing to select images from an unknown state."
+            exit "$remote_status"
           fi
           git diff --name-only "$base" HEAD > /tmp/changed-paths
-          while IFS= read -r path; do
-            case "$path" in
-              backend/*)
-                api=true ;;
-              web/*)
-                web=true ;;
-              .dockerignore|.github/workflows/cd.yml|scripts/*)
-                api=true; web=true ;;
-              deploy/*)
-                deploy=true ;;
-            esac
-          done < /tmp/changed-paths
+          selection=$(DELIVERY_BOOTSTRAP="$bootstrap" bash scripts/select-delivery-images.sh < /tmp/changed-paths)
+          api=$(printf '%s\n' "$selection" | sed -n 's/^api=//p')
+          web=$(printf '%s\n' "$selection" | sed -n 's/^web=//p')
 
           images=false
           if [ "$api" = true ] || [ "$web" = true ]; then images=true; fi
@@ -133,7 +127,8 @@ jobs:
       always() &&
       needs.changes.result == 'success' &&
       needs.changes.outputs.promote == 'true' &&
-      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+      ((needs.changes.outputs.images == 'true' && needs.publish.result == 'success') ||
+       (needs.changes.outputs.images == 'false' && needs.publish.result == 'skipped'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

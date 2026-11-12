@@ -13,6 +13,8 @@ check $'browser_mode=studio\nbrowser_specs=e2e/synth.spec.ts e2e/samples.spec.ts
 check $'browser_mode=full\nbrowser_specs=' 'web/src/main.tsx'
 check $'browser_mode=full\nbrowser_specs=' 'backend/internal/httpapi/server.go'
 check $'browser_mode=none\nbrowser_specs=' 'docs/architecture.md'
+check $'browser_mode=none\nbrowser_specs=' 'scripts/select-delivery-images.sh'
+check $'browser_mode=none\nbrowser_specs=' 'scripts/test-select-studio-tests.sh'
 actual=$(printf '%s\n' 'docs/architecture.md' | FORCE_FULL_BROWSER=true bash "$selector")
 [ "$actual" = $'browser_mode=full\nbrowser_specs=' ]
 printf 'Studio test selection passed.\n'

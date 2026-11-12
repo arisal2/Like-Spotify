@@ -37,6 +37,12 @@ only API or web images whose source changed; unchanged components retain their
 previous immutable commit-SHA tag. Each delivery writes the complete desired
 state and records the tested source revision.
 
+The API image is rebuilt for `backend/` changes and the web image for `web/`
+changes. A `.dockerignore` change rebuilds both; CI scripts and workflow-only
+changes do not change either image. The first delivery (or a deployment branch
+without a usable source marker) builds both. If the remote cannot be inspected,
+delivery fails instead of treating the failure as a first deployment.
+
 The Docker Desktop workers are ARM64. Delivery uses an ARM64 runner and
 publishes `linux/arm64` images. Pull-request container validation remains a
 separate AMD64 build check.

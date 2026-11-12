@@ -13,6 +13,8 @@ while IFS= read -r path; do
       synth=true; samples=true ;;
     web/src/audio/sampleMixer.ts|web/src/audio/sampleStore.ts|web/e2e/samples.spec.ts)
       samples=true ;;
+    scripts/select-studio-tests.sh|scripts/test-select-studio-tests.sh|scripts/select-delivery-images.sh|scripts/test-select-delivery-images.sh)
+      ;;
     web/*|backend/*|.github/workflows/*|scripts/*|.dockerignore|compose.yaml|.env.example|.github/dependabot.yml)
       full=true ;;
   esac
