@@ -13,6 +13,8 @@ jobs:
       backend: ${{ steps.paths.outputs.backend }}
       frontend: ${{ steps.paths.outputs.frontend }}
       browser: ${{ steps.paths.outputs.browser }}
+      browser-mode: ${{ steps.paths.outputs.browser_mode }}
+      browser-specs: ${{ steps.paths.outputs.browser_specs }}
       kubernetes: ${{ steps.paths.outputs.kubernetes }}
       security: ${{ steps.paths.outputs.security }}
       documentation: ${{ steps.paths.outputs.documentation }}
@@ -31,6 +33,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           CURRENT_SHA: ${{ github.sha }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
           backend=false
           frontend=false
@@ -40,6 +43,7 @@ jobs:
           documentation=false
           container_api=false
           container_web=false
+          force_full=false
 
           if [ "$EVENT_NAME" != 'push' ] && [ "$EVENT_NAME" != 'pull_request' ]; then
             backend=true
@@ -50,6 +54,8 @@ jobs:
             documentation=true
             container_api=true
             container_web=true
+            force_full=true
+            : > /tmp/changed-paths
           else
             if [ "$EVENT_NAME" = 'pull_request' ]; then
               base="$PR_BASE_SHA"
@@ -84,6 +90,10 @@ jobs:
               esac
             done < /tmp/changed-paths
           fi
+
+          if [ "$EVENT_NAME" = 'pull_request' ] && [ "$BASE_REF" = 'master' ]; then force_full=true; fi
+          FORCE_FULL_BROWSER="$force_full" bash scripts/select-studio-tests.sh < /tmp/changed-paths >> "$GITHUB_OUTPUT"
+          bash scripts/test-select-studio-tests.sh
 
           container_images=false
           container_include='[]'
@@ -181,7 +191,7 @@ jobs:
             pkg:githubactions/azure/setup-kubectl
   browser:
     needs: changes
-    if: needs.changes.outputs.browser == 'true'
+    if: needs.changes.outputs.browser-mode == 'full'
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -263,6 +273,50 @@ jobs:
           if [ -f /tmp/bedlam-like-music-api.pid ]; then kill "$(cat /tmp/bedlam-like-music-api.pid)" || true; fi
           if [ -f /tmp/bedlam-like-music-web.pid ]; then kill "$(cat /tmp/bedlam-like-music-web.pid)" || true; fi
 
+  browser-studio:
+    needs: changes
+    if: needs.changes.outputs.browser-mode == 'studio'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm install --global npm@12.2.2
+      - run: npm ci
+        working-directory: web
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('web/package-lock.json') }}
+      - run: npx playwright install chromium
+        working-directory: web
+      - name: Run selected studio journeys
+        working-directory: web
+        env:
+          E2E_BASE_URL: http://127.0.0.1:5173
+          STUDIO_SPECS: ${{ needs.changes.outputs.browser-specs }}
+        run: |
+          npm run dev > /tmp/bedlam-studio.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:5173/ >/dev/null; then break; fi
+            if [ "$attempt" = 60 ]; then cat /tmp/bedlam-studio.log; exit 1; fi
+            sleep 1
+          done
+          # The selector emits only fixed repository-owned spec paths.
+          read -r -a specs <<< "$STUDIO_SPECS"
+          [ "${#specs[@]}" -gt 0 ]
+          npx playwright test "${specs[@]}"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: studio-browser-failure
+          path: web/test-results
+
   containers:
     needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.container-images == 'true'
@@ -337,6 +391,7 @@ jobs:
         backend,
         frontend,
         browser,
+        browser-studio,
         containers,
         kubernetes,
         security-config,
@@ -351,14 +406,43 @@ jobs:
           BACKEND: ${{ needs.backend.result }}
           FRONTEND: ${{ needs.frontend.result }}
           BROWSER: ${{ needs.browser.result }}
+          BROWSER_STUDIO: ${{ needs.browser-studio.result }}
+          BROWSER_MODE: ${{ needs.changes.outputs.browser-mode }}
           CONTAINERS: ${{ needs.containers.result }}
           KUBERNETES: ${{ needs.kubernetes.result }}
           SECURITY: ${{ needs.security-config.result }}
           DOCUMENTATION: ${{ needs.documentation.result }}
           DEPENDENCIES: ${{ needs.dependency-review.result }}
+          EXPECT_BACKEND: ${{ needs.changes.outputs.backend }}
+          EXPECT_FRONTEND: ${{ needs.changes.outputs.frontend }}
+          EXPECT_KUBERNETES: ${{ needs.changes.outputs.kubernetes }}
+          EXPECT_SECURITY: ${{ needs.changes.outputs.security }}
+          EXPECT_DOCUMENTATION: ${{ needs.changes.outputs.documentation }}
+          EXPECT_CONTAINERS: ${{ github.event_name == 'pull_request' && needs.changes.outputs.container-images == 'true' }}
+          EXPECT_DEPENDENCIES: ${{ github.event_name == 'pull_request' }}
         run: |
           [ "$CHANGES" = 'success' ]
-          for result in "$BACKEND" "$FRONTEND" "$BROWSER" "$CONTAINERS" "$KUBERNETES" "$SECURITY" "$DOCUMENTATION" "$DEPENDENCIES"; do
+          require_selected() {
+            local name="$1" expected="$2" result="$3"
+            if [ "$expected" = true ] && [ "$result" != success ]; then
+              echo "$name was selected but did not succeed: $result"
+              exit 1
+            fi
+          }
+          require_selected backend "$EXPECT_BACKEND" "$BACKEND"
+          require_selected frontend "$EXPECT_FRONTEND" "$FRONTEND"
+          require_selected kubernetes "$EXPECT_KUBERNETES" "$KUBERNETES"
+          require_selected security "$EXPECT_SECURITY" "$SECURITY"
+          require_selected documentation "$EXPECT_DOCUMENTATION" "$DOCUMENTATION"
+          require_selected containers "$EXPECT_CONTAINERS" "$CONTAINERS"
+          require_selected dependency-review "$EXPECT_DEPENDENCIES" "$DEPENDENCIES"
+          case "$BROWSER_MODE" in
+            full) [ "$BROWSER" = success ] && [ "$BROWSER_STUDIO" = skipped ] ;;
+            studio) [ "$BROWSER_STUDIO" = success ] && [ "$BROWSER" = skipped ] ;;
+            none) [ "$BROWSER" = skipped ] && [ "$BROWSER_STUDIO" = skipped ] ;;
+            *) echo 'Unknown browser test selection'; exit 1 ;;
+          esac
+          for result in "$BACKEND" "$FRONTEND" "$BROWSER" "$BROWSER_STUDIO" "$CONTAINERS" "$KUBERNETES" "$SECURITY" "$DOCUMENTATION" "$DEPENDENCIES"; do
             if [ "$result" != 'success' ] && [ "$result" != 'skipped' ]; then
               echo "A selected CI job did not pass: $result"
               exit 1

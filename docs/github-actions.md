@@ -53,6 +53,22 @@ separate AMD64 build check.
 CI success verifies the build and tests; it does not by itself verify local
 Argo reconciliation. Use the application and endpoint checks above.
 
+## Browser test selection
+
+Synth-only and sample-studio-only changes run their selected Chromium journeys
+against Vite without starting the Go API or MySQL. Changes to both run both
+journeys; changes to the shared studio shell also run both. Other shared
+frontend files, backend code, workflow configuration, and
+unknown frontend paths fall back to the full browser suite with its existing
+API and database setup. Pull requests to `master` always run that full suite.
+Frontend changes still run the complete unit suite, lint, and build. The
+`ci-gate` requires every selected job to succeed, including the selected
+browser job; a skipped selected job fails the gate.
+
+Maintain the explicit paths and tests in `scripts/select-studio-tests.sh` and
+`scripts/test-select-studio-tests.sh` when adding or moving studio files. New
+paths default to the full suite until deliberately classified.
+
 ## Dependency protection
 
 Pull requests run dependency review, npm audit, `govulncheck`, and Trivy.
