@@ -19,7 +19,17 @@ export function SampleEditor({
 	const [busy, setBusy] = useState(false);
 	const [message, setMessage] = useState("Loading sample…");
 	const [preview, setPreview] = useState("");
+	const [original, setOriginal] = useState("");
 	const player = useRef<HTMLAudioElement>(null);
+	const editor = useRef<HTMLElement>(null);
+	useEffect(() => {
+		editor.current?.scrollIntoView({ block: "start" });
+	}, [input]);
+	useEffect(() => {
+		const url = URL.createObjectURL(input.audio);
+		setOriginal(url);
+		return () => URL.revokeObjectURL(url);
+	}, [input.audio]);
 	useEffect(() => {
 		let active = true;
 		const context = new AudioContext();
@@ -103,6 +113,7 @@ export function SampleEditor({
 	}
 	return (
 		<section
+			ref={editor}
 			className="sample-section sample-editor"
 			aria-labelledby="sample-editor-title"
 		>
@@ -114,6 +125,16 @@ export function SampleEditor({
 				</div>
 				<button onClick={onClose}>Close editor</button>
 			</div>
+			{original && (
+				<div className="editor-original">
+					<span>Original sample</span>
+					<audio
+						controls
+						src={original}
+						aria-label="Original sample playback"
+					/>
+				</div>
+			)}
 			<div className="editor-controls">
 				<label>
 					Sample name

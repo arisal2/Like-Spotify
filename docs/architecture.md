@@ -2,10 +2,11 @@
 
 ## System context
 
-Bedlam-Like-Music is a single-origin web application. nginx serves the compiled React SPA
-and proxies `/api/` and `/media/` to the Go service. MySQL stores user-owned
-state; audio and artwork remain outside the database on a bind mount or
-Kubernetes persistent volume.
+Bedlam-Like-Music is a single-origin web application. nginx serves the compiled
+React SPA and proxies `/api/` and `/media/` to the Go service. The current
+studio creates and edits audio in the browser and stores samples in IndexedDB.
+The existing Go service and MySQL retain account and legacy music-library data;
+they do not store studio samples or synth patches.
 
 ```text
                        ┌───────────────────────┐
@@ -21,13 +22,18 @@ Browser ── HTTP(S) ──▶ │ nginx + React SPA     │
                          MySQL     media  AI provider
 ```
 
+In the browser, Web Audio generates synth notes, analyzes short recordings,
+and renders edited WAVs. IndexedDB holds samples and mixer settings; local
+storage holds the synth patch and theme. These browser-local stores are not
+synced across devices and are not covered by MySQL or media-volume backups.
+
 ## Component responsibilities
 
 ### Web
 
-- Renders discovery, search, library, history, mixes, and player UI.
-- Keeps the active queue and player preferences in browser storage.
-- Uses cookie authentication and sends the session CSRF token on mutations.
+- Renders the sample library, synthesizer, sound matcher, and theory workspace.
+- Keeps audio synthesis, recording, sample editing, and local persistence in
+  the browser. Microphone access is requested only when recording starts.
 - Does not connect directly to MySQL, the media volume, or the AI provider.
 
 ### API
@@ -65,7 +71,7 @@ shared store or enforce limits at the edge.
 
 ## Recommendation and AI flow
 
-Local mood matching is always available and uses catalog tags. When
+The existing API provides local mood matching using catalog tags. When
 `OPENAI_API_KEY` and `OPENAI_MODEL` are configured, the API may send the mood
 prompt and catalog metadata to the provider. The API validates returned song
 identifiers against the local catalog. Account details and listening history
@@ -73,12 +79,12 @@ are not part of the provider request.
 
 ## Deployment flow
 
-Pull requests run Go, frontend, browser, Kubernetes-render, dependency, secret,
-and configuration checks. A successful `development` run triggers image publication
-for ARM64, then writes the tested commit and source-SHA image tags to
-`deploy/test`. Docker Desktop Argo CD reconciles that test state. A separate,
-approved workflow copies the exact tested image set into `deploy/production`
-for the second namespace-scoped Argo CD instance on the production worker.
+CI selects relevant checks by changed path. A successful `development` run
+publishes changed ARM64 images and records the tested source and image tags in
+`deploy/test`; test Argo CD reconciles that branch. After promotion to `master`,
+the same process updates `deploy/production` for the production-rehearsal Argo
+instance. Unchanged images keep their prior tags; changed components are built
+for the corresponding source revision.
 
 ## Kubernetes security boundaries
 

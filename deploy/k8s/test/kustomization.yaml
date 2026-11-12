@@ -10,7 +10,7 @@ images:
     newTag: 9eb9c50f12c01d4800f30b5c0ebda7f325567757
   - name: bedlam-like-music-web:local
     newName: ghcr.io/arisal2/bedlam-like-music/web
-    newTag: db24a161224ecaa938b8efc2d5acdbd1ca333aa1
+    newTag: a3b12a6152cc8dc4d9e16ccd4fa3057d647bbf00
 patches:
   - path: config-patch.yaml
   - path: observability-api-ingress-patch.yaml

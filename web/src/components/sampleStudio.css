@@ -79,6 +79,42 @@
 	margin-top: 18px;
 	order: 1;
 }
+.synth-sample-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 12px;
+	margin: 20px 0 6px;
+}
+.synth-sample-actions label {
+	display: grid;
+	gap: 8px;
+	color: var(--studio-muted);
+	font-size: 13px;
+}
+.synth-sample-actions select,
+.synth-sample-actions input {
+	color: #f2f2ed;
+	background: var(--studio-bg);
+	border: 1px solid #ffffff40;
+	border-radius: 6px;
+	padding: 10px;
+	max-width: 150px;
+}
+.synth-sample-actions button {
+	background: var(--accent);
+	color: var(--studio-ink);
+	border-radius: 7px;
+	padding: 11px 16px;
+	font-weight: 700;
+}
+.editor-original {
+	display: grid;
+	gap: 8px;
+	margin: 20px 0;
+	color: var(--studio-muted);
+	font-size: 13px;
+}
 .synth-keyboard-panel .synth-keys {
 	display: grid;
 	grid-template-columns: repeat(12, minmax(0, 1fr));

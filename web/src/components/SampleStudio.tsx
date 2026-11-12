@@ -177,7 +177,12 @@ export function SampleStudio() {
 			</aside>
 			<main className="sample-main">
 				{view === "synth" ? (
-					<SynthStudio />
+					<SynthStudio
+						onSendToEditor={(audio, name) => {
+							setEditorInput({ audio, name });
+							navigate("/");
+						}}
+					/>
 				) : (
 					<>
 						<header className="sample-header">
