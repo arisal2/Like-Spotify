@@ -20,7 +20,7 @@ test("playable synth saves its patch and releases keys", async ({ page }) => {
 	await page.reload();
 	await expect(page.getByLabel("Waveform")).toHaveValue("sawtooth");
 	await expect(page.getByRole("slider", { name: "Filter cutoff" })).toHaveValue("1200");
-	await page.getByRole("link", { name: "Discover" }).click();
+	await page.getByRole("button", { name: "Sample library" }).click();
 	await expect(page).toHaveURL(/\/$/);
 	await expect(page.getByRole("heading", { name: "Make your first sound." })).not.toBeVisible();
 });
