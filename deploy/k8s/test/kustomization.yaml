@@ -7,10 +7,10 @@ resources:
 images:
   - name: bedlam-like-music-api:local
     newName: ghcr.io/arisal2/bedlam-like-music/api
-    newTag: a15338e3fa2a40f86e3a60c44b3ae949e645c99c
+    newTag: 8e260518cff64828ada009e6f4d2fc35cde49109
   - name: bedlam-like-music-web:local
     newName: ghcr.io/arisal2/bedlam-like-music/web
-    newTag: a15338e3fa2a40f86e3a60c44b3ae949e645c99c
+    newTag: 8e260518cff64828ada009e6f4d2fc35cde49109
 patches:
   - path: config-patch.yaml
   - path: observability-api-ingress-patch.yaml
