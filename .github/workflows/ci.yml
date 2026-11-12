@@ -77,6 +77,8 @@ jobs:
                   frontend=true; browser=true; security=true; container_web=true ;;
                 deploy/*)
                   kubernetes=true; security=true ;;
+                scripts/select-studio-tests.sh|scripts/test-select-studio-tests.sh|scripts/select-delivery-images.sh|scripts/test-select-delivery-images.sh)
+                  security=true ;;
                 .github/workflows/*|scripts/*)
                   backend=true; frontend=true; browser=true; kubernetes=true; security=true; container_api=true; container_web=true ;;
                 .dockerignore)
@@ -94,6 +96,7 @@ jobs:
           if [ "$EVENT_NAME" = 'pull_request' ] && [ "$BASE_REF" = 'master' ]; then force_full=true; fi
           FORCE_FULL_BROWSER="$force_full" bash scripts/select-studio-tests.sh < /tmp/changed-paths >> "$GITHUB_OUTPUT"
           bash scripts/test-select-studio-tests.sh
+          bash scripts/test-select-delivery-images.sh
 
           container_images=false
           container_include='[]'
