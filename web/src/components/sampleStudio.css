@@ -1,0 +1,238 @@
+.sample-app {
+	min-height: 100vh;
+	display: flex;
+	background: #111315;
+}
+.sample-sidebar {
+	width: 240px;
+	padding: 36px 24px;
+	border-right: 1px solid #ffffff16;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	flex-shrink: 0;
+}
+.sample-brand {
+	font-size: 23px;
+	font-weight: 800;
+	letter-spacing: -0.06em;
+}
+.sample-brand span {
+	color: #d9f874;
+}
+.sample-sidebar p,
+.sample-note {
+	color: #9ba29d;
+	font-size: 11px;
+	letter-spacing: 0.1em;
+	line-height: 1.6;
+}
+.sample-sidebar nav {
+	display: grid;
+	gap: 8px;
+	margin-top: 30px;
+}
+.sample-sidebar nav button {
+	text-align: left;
+	padding: 14px;
+	border-radius: 8px;
+	color: #b3bab3;
+}
+.sample-sidebar nav button.selected {
+	background: #d9f874;
+	color: #151815;
+	font-weight: 700;
+}
+.sample-note {
+	margin-top: auto;
+	letter-spacing: 0;
+}
+.sample-main {
+	flex: 1;
+	min-width: 0;
+	padding: clamp(24px, 5vw, 72px);
+	max-width: 1500px;
+}
+.sample-header,
+.sample-section-title {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 24px;
+}
+.sample-header {
+	padding: 32px 0 50px;
+}
+.sample-header h1 {
+	font-size: clamp(40px, 5vw, 68px);
+	letter-spacing: -0.06em;
+	margin: 12px 0;
+}
+.sample-header p,
+.sample-section-title p,
+.sample-hint {
+	color: #a7aea8;
+	line-height: 1.6;
+}
+.sample-upload,
+.sample-actions button:first-child {
+	background: #d9f874;
+	color: #141714;
+	padding: 15px 20px;
+	border-radius: 7px;
+	font-weight: 700;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.sample-upload input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+.sample-upload:focus-within {
+	outline: 2px solid #d9f874;
+	outline-offset: 4px;
+}
+.sample-section {
+	border-top: 1px solid #ffffff20;
+	padding: 30px 0;
+}
+.sample-section h2 {
+	margin: 8px 0;
+}
+.sample-section form {
+	display: flex;
+	gap: 8px;
+}
+.sample-section form input {
+	background: #1d2220;
+	border: 1px solid #ffffff26;
+	border-radius: 7px;
+	padding: 11px;
+	max-width: 180px;
+}
+.sample-section form button,
+.sample-actions button:last-child {
+	border: 1px solid #ffffff35;
+	padding: 10px 14px;
+	border-radius: 7px;
+}
+.album-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 20px 0 8px;
+}
+.album-chips button {
+	border: 1px solid #ffffff30;
+	border-radius: 40px;
+	padding: 9px 16px;
+}
+.album-chips button.selected {
+	border-color: #d9f874;
+	color: #d9f874;
+}
+.sample-hint {
+	font-size: 12px;
+}
+.sample-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+.sample-empty {
+	margin-top: 24px;
+	border: 1px dashed #ffffff32;
+	border-radius: 12px;
+	padding: 42px;
+	text-align: center;
+	color: #a7aea8;
+}
+.sample-empty strong {
+	color: #f2f2ed;
+	font-size: 18px;
+}
+.sample-empty p {
+	margin-top: 8px;
+}
+.sample-list {
+	display: grid;
+	gap: 8px;
+	margin-top: 24px;
+}
+.sample-track {
+	background: #1b1f1d;
+	border-radius: 9px;
+	padding: 16px;
+	display: grid;
+	grid-template-columns: minmax(140px, 2fr) auto minmax(100px, 1fr) minmax(
+			100px,
+			1fr
+		) auto auto;
+	align-items: center;
+	gap: 18px;
+}
+.sample-track-name {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	min-width: 0;
+}
+.sample-track-name span {
+	color: #d9f874;
+	font-size: 24px;
+}
+.sample-track-name strong {
+	overflow-wrap: anywhere;
+}
+.sample-track label {
+	display: grid;
+	gap: 10px;
+	color: #a7aea8;
+	font-size: 12px;
+}
+.sample-track input {
+	width: 100%;
+}
+.sample-status {
+	margin-top: 20px;
+	color: #a7aea8;
+	font-size: 13px;
+}
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+@media (max-width: 760px) {
+	.sample-app {
+		flex-direction: column;
+	}
+	.sample-sidebar {
+		width: 100%;
+		padding: 20px;
+		gap: 8px;
+	}
+	.sample-sidebar nav {
+		display: flex;
+		margin-top: 8px;
+	}
+	.sample-note {
+		display: none;
+	}
+	.sample-header,
+	.sample-section-title {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+	.sample-track {
+		grid-template-columns: 1fr auto auto;
+	}
+	.sample-track label {
+		grid-row: 2;
+	}
+}
