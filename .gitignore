@@ -13,3 +13,4 @@ coverage.out
 deploy/k8s/local/secrets.env
 assets/
 media-backup/
+docs/local/

@@ -1,50 +1,25 @@
 # Documentation
 
-Use this page as the entry point for operating and changing Bedlam-Like-Music.
+## Use the studio
 
-| Guide                                                    | Use it when you need to…                                       |
-| -------------------------------------------------------- | -------------------------------------------------------------- |
-| [Bedlam-Like-Music Studio PRD](bedlam-like-music-prd.md) | review future product scope before roadmap and OKRs            |
-| [Project management](project/README.md)                  | review roles, tasks, status, and Producer decisions            |
-| [Architecture](architecture.md)                          | understand components, trust boundaries, data, and AI behavior |
-| [Development](development.md)                            | run services, tests, builds, and browser checks locally        |
-| [API reference](api.md)                                  | integrate with or debug HTTP endpoints                         |
-| [Operations](operations.md)                              | inspect health, logs, backups, recovery, and rollbacks         |
-| [Argo CD](argo-cd.md)                                    | install the local Kubernetes and Argo CD deployment            |
-| [GitHub Actions](github-actions.md)                      | configure CI, promotion, and branch protection                 |
-| [Deployment environments](deployment-environments.md)    | deploy to test before protected remote production              |
-| [Production readiness](production-readiness-template.md) | review every launch gate, owner, and evidence item             |
-| [Security policy](../SECURITY.md)                        | report vulnerabilities and review the deployment baseline      |
+- [Studio guide](studio.md): synthesis, samples, sound matching, and theory.
+- [Quick start](../README.md#get-started): run the app with Docker Compose.
 
-## Choose a path
+## Build and understand
 
-- First local run: [README quick start](../README.md#quick-start-with-docker) →
-  [development guide](development.md).
-- First cluster deployment: [Argo CD guide](argo-cd.md) →
-  [GitHub Actions guide](github-actions.md).
-- Incident or failed rollout: [operations guide](operations.md) → relevant
-  workflow or Argo troubleshooting section.
-- API change: [API reference](api.md) → server routes in
-  `backend/internal/httpapi/server.go` → integration tests.
+- [Development and testing](development.md): local tools, services, and checks.
+- [Architecture](architecture.md): audio, storage, API, and deployment boundaries.
+- [API reference](api.md): existing Go endpoints.
+- [Project notes](project/README.md): roles and decisions; older task entries may describe previous product directions.
 
-Documentation must describe checked-in behavior. Update the relevant guide in
-the same pull request when commands, environment variables, endpoints,
-deployment behavior, or operational procedures change.
+## Deploy and operate
 
-## Local deployment map
+- [Argo CD setup](argo-cd.md): bootstrap the local cluster and activate applications.
+- [GitHub Actions and GitOps](github-actions.md): CI, image selection, and promotion.
+- [Deployment environments](deployment-environments.md): test and production-rehearsal topology.
+- [Observability](observability.md): local Prometheus, Grafana, and health probes.
+- [Operations](operations.md): health checks, backups, and recovery.
+- [Production readiness template](production-readiness-template.md): questions for a future external deployment.
+- [Security policy](../SECURITY.md): security guidance and reporting.
 
-Use these guides in order for a new machine:
-
-1. [Development](development.md) to validate tools, tests, and manifest
-   rendering.
-2. [GitHub Actions](github-actions.md) to configure repository permissions and
-   the required branch-protection check.
-3. [Argo CD](argo-cd.md) to install the controller, create runtime secrets,
-   bootstrap the application, import media, and verify persistent endpoints.
-4. [Operations](operations.md) for routine health checks, backups, rollback,
-   and incident diagnosis.
-
-`deploy/k8s/local` is a manual pre-merge smoke-test overlay.
-`deploy/k8s/test` on `deploy/test` is the Docker Desktop desired state.
-Production has a separate remote-cluster template and readiness review.
-Do not operate both as competing deployment methods.
+The `deploy/k8s/local` overlay is a manual smoke-test option. The normal local GitOps path uses `deploy/test` and `deploy/production`, each reconciled by its own Argo CD instance. The production environment is a local rehearsal, not a hosted production service.

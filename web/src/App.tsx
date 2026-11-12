@@ -33,6 +33,7 @@ import { usePlayer } from "./hooks/usePlayer";
 import { Player } from "./components/Player";
 import { Modal } from "./components/Modal";
 import { SoundLab } from "./components/SoundLab";
+import { SynthStudio } from "./components/SynthStudio";
 
 export function App() {
   const client = useQueryClient();
@@ -112,6 +113,7 @@ export function App() {
   const isLikes = location.pathname === "/likes";
   const isSearch = location.pathname === "/search";
   const isSoundLab = location.pathname === "/studio/sound-lab";
+  const isSynthStudio = location.pathname === "/studio/synth";
   const albums = [
     ...new Map(songs.map((song) => [song.albumId, song])).values(),
   ];
@@ -214,6 +216,10 @@ export function App() {
             <AudioWaveform size={20} />
             Sound Lab
           </NavLink>
+          <NavLink to="/studio/synth">
+            <AudioWaveform size={20} />
+            Synth Studio
+          </NavLink>
         </nav>
         <div className="library-title">
           <span>
@@ -268,15 +274,17 @@ export function App() {
             <strong>
               {isSearch
                 ? "Search"
-                : isSoundLab
-                  ? "Sound Lab"
-                  : isLikes
-                    ? "Liked songs"
-                    : playlist
-                      ? "Playlist"
-                      : album
-                        ? "Album"
-                        : "Discover"}
+                : isSynthStudio
+                  ? "Synth Studio"
+                  : isSoundLab
+                    ? "Sound Lab"
+                    : isLikes
+                      ? "Liked songs"
+                      : playlist
+                        ? "Playlist"
+                        : album
+                          ? "Album"
+                          : "Discover"}
             </strong>
           </div>
           <div className="account">
@@ -330,7 +338,9 @@ export function App() {
               </button>
             </div>
           )}
-          {isSoundLab ? (
+          {isSynthStudio ? (
+            <SynthStudio />
+          ) : isSoundLab ? (
             <SoundLab />
           ) : catalog.isPending ? (
             <div className="loading" role="status">

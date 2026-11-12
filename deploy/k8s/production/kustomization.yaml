@@ -10,7 +10,7 @@ images:
     newTag: e43ef72652420802143a000bc2ae0078905c8466
   - name: bedlam-like-music-web:local
     newName: ghcr.io/arisal2/bedlam-like-music/web
-    newTag: e43ef72652420802143a000bc2ae0078905c8466
+    newTag: 738793166c2aa83a109491fe23be49ad1187ebc4
 patches:
   - path: config-patch.yaml
   - path: scale-patch.yaml

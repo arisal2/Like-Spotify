@@ -279,6 +279,43 @@ a:hover {
   max-width: 1280px;
   margin: 0 auto;
 }
+
+.synth-keys {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 12px 0;
+}
+.synth-key {
+  flex: 1 0 44px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px;
+  border: 1px solid #777;
+  border-radius: 0 0 7px 7px;
+  background: #f5f2e9;
+  color: #222;
+  cursor: pointer;
+  touch-action: none;
+}
+.synth-key.sharp {
+  background: #242333;
+  color: #fff;
+  min-height: 110px;
+  align-self: flex-start;
+}
+.synth-key.pressed {
+  background: #f6b85f;
+  color: #191919;
+}
+.synth-key:focus-visible {
+  outline: 3px solid #e89a38;
+  outline-offset: 2px;
+}
 .sound-lab-hero {
   min-height: 230px;
   padding: 38px 42px;

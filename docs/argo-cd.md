@@ -86,8 +86,9 @@ kubectl apply -k deploy/argocd
 kubectl get application -n argocd-test
 ```
 
-After test is Synced and Healthy, verify sign-in, catalog, playback, and
-persistence. Approve production only after validating that exact test revision.
+After test is Synced and Healthy, check the studio, synth playback, and sample
+editing in a browser. Promote to the production rehearsal only after reviewing
+the test environment.
 Once `deploy/production` has been created by promotion:
 
 ```bash

@@ -1,0 +1,84 @@
+.theory-shell { min-height: 100vh; background: #111315; padding: clamp(20px, 5vw, 64px); }
+.theory-shell nav { display: flex; gap: 24px; margin: 0 auto 24px; max-width: 1280px; color: #d9f874; }
+.theory-launch { position: fixed; right: 20px; bottom: 20px; z-index: 5; padding: 12px 18px; border-radius: 30px; background: #d9f874; color: #151815; font-weight: 700; box-shadow: 0 4px 18px #0007; }
+.theory-studio {
+	max-width: 1280px;
+	margin: 0 auto;
+}
+.theory-controls {
+	display: flex;
+	align-items: end;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin: 24px 0;
+}
+.theory-controls label {
+	display: grid;
+	gap: 8px;
+	color: var(--studio-muted, #a7aea8);
+	font-size: 13px;
+}
+.theory-controls select {
+	min-width: 120px;
+	padding: 12px;
+	color: #fff;
+	background: var(--studio-panel, #1b1f1d);
+	border: 1px solid #ffffff40;
+	border-radius: 7px;
+}
+.theory-primary {
+	padding: 12px 18px;
+	background: var(--accent);
+	color: var(--studio-ink, #141714);
+	border-radius: 7px;
+	font-weight: 700;
+}
+.theory-panel {
+	margin-top: 18px;
+	padding: clamp(20px, 3vw, 32px);
+	background: var(--studio-panel, #1b1f1d);
+	border: 1px solid #ffffff18;
+	border-radius: 14px;
+}
+.theory-panel h2 {
+	margin: 8px 0 12px;
+}
+.theory-panel > p {
+	color: var(--studio-muted, #a7aea8);
+	line-height: 1.6;
+	max-width: 760px;
+}
+.theory-notes,
+.theory-chords {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+	gap: 10px;
+	margin: 24px 0;
+}
+.theory-notes button,
+.theory-chords button {
+	display: grid;
+	gap: 10px;
+	text-align: left;
+	padding: 16px;
+	background: var(--studio-bg, #111315);
+	border: 1px solid #ffffff25;
+	border-radius: 9px;
+}
+.theory-notes button:hover,
+.theory-chords button:hover {
+	border-color: var(--accent);
+}
+.theory-notes strong,
+.theory-chords strong {
+	font-size: 22px;
+	color: var(--accent);
+}
+.theory-notes span,
+.theory-chords span {
+	color: var(--studio-muted, #a7aea8);
+	font-size: 12px;
+}
+.theory-hint {
+	font-size: 13px;
+}
