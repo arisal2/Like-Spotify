@@ -1,7 +1,122 @@
 .sample-app {
+	--accent: #d9f874;
+	--studio-bg: #111315;
+	--studio-panel: #1b1f1d;
+	--panel: #191c1d;
+	--studio-muted: #a7aea8;
+	--studio-ink: #141714;
 	min-height: 100vh;
 	display: flex;
-	background: #111315;
+	background: var(--studio-bg);
+}
+.sample-app[data-theme="cyberpunk"] {
+	--accent: #f7a4f4;
+	--studio-bg: #171126;
+	--studio-panel: #29203d;
+	--panel: #29203d;
+	--studio-muted: #c7bbd9;
+	--studio-ink: #211124;
+}
+.sample-app[data-theme="retro"] {
+	--accent: #ffd482;
+	--studio-bg: #241914;
+	--studio-panel: #3b2921;
+	--panel: #3b2921;
+	--studio-muted: #d9c1aa;
+	--studio-ink: #251810;
+}
+.sample-app[data-theme="ocean"] {
+	--accent: #83e3e9;
+	--studio-bg: #0f2026;
+	--studio-panel: #1a353b;
+	--panel: #1a353b;
+	--studio-muted: #a9c8ca;
+	--studio-ink: #102023;
+}
+.theme-picker {
+	display: grid;
+	gap: 8px;
+	margin-top: 18px;
+	color: var(--studio-muted);
+	font-size: 13px;
+}
+.theme-picker select {
+	background: var(--studio-panel);
+	color: #fff;
+	border: 1px solid #ffffff45;
+	border-radius: 7px;
+	padding: 10px;
+}
+.synth-layout {
+	margin-top: 18px;
+	order: 2;
+}
+.synth-studio {
+	display: flex;
+	flex-direction: column;
+}
+.synth-explainer {
+	color: var(--studio-muted);
+	line-height: 1.6;
+	margin-top: 18px;
+	font-size: 13px;
+}
+.synth-math {
+	margin-top: 18px;
+	color: var(--studio-muted);
+	line-height: 1.7;
+	font-size: 13px;
+}
+.synth-math summary {
+	cursor: pointer;
+	color: var(--accent);
+}
+.synth-math p {
+	margin-top: 8px;
+	overflow-wrap: anywhere;
+}
+.synth-keyboard-panel {
+	margin-top: 18px;
+	order: 1;
+}
+.synth-keyboard-panel .synth-keys {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: 3px;
+	overflow: visible;
+}
+.synth-keyboard-panel .synth-key {
+	width: 100%;
+	min-width: 0;
+	padding-inline: 1px;
+	font-size: clamp(8px, 1vw, 14px);
+}
+.sample-editor .editor-controls {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 16px;
+	margin: 24px 0;
+}
+.editor-controls label {
+	display: grid;
+	gap: 9px;
+	color: var(--studio-muted);
+	font-size: 13px;
+}
+.editor-controls input:not([type="range"]) {
+	min-width: 0;
+	width: 100%;
+	padding: 10px;
+	border: 1px solid #ffffff35;
+	border-radius: 6px;
+	background: var(--studio-panel);
+}
+.sample-editor .sample-actions {
+	flex-wrap: wrap;
+	margin-bottom: 16px;
+}
+.sample-editor audio {
+	max-width: 100%;
 }
 .sample-sidebar {
 	width: 240px;
@@ -18,7 +133,7 @@
 	letter-spacing: -0.06em;
 }
 .sample-brand span {
-	color: #d9f874;
+	color: var(--accent);
 }
 .sample-sidebar p,
 .sample-note {
@@ -39,8 +154,8 @@
 	color: #b3bab3;
 }
 .sample-sidebar nav button.selected {
-	background: #d9f874;
-	color: #151815;
+	background: var(--accent);
+	color: var(--studio-ink);
 	font-weight: 700;
 }
 .sample-note {
@@ -76,8 +191,8 @@
 }
 .sample-upload,
 .sample-actions button:first-child {
-	background: #d9f874;
-	color: #141714;
+	background: var(--accent);
+	color: var(--studio-ink);
 	padding: 15px 20px;
 	border-radius: 7px;
 	font-weight: 700;
@@ -130,8 +245,8 @@
 	padding: 9px 16px;
 }
 .album-chips button.selected {
-	border-color: #d9f874;
-	color: #d9f874;
+	border-color: var(--accent);
+	color: var(--accent);
 }
 .sample-hint {
 	font-size: 12px;
@@ -162,11 +277,11 @@
 	margin-top: 24px;
 }
 .sample-track {
-	background: #1b1f1d;
+	background: var(--studio-panel);
 	border-radius: 9px;
 	padding: 16px;
 	display: grid;
-	grid-template-columns: minmax(140px, 2fr) auto minmax(100px, 1fr) minmax(
+	grid-template-columns: minmax(140px, 2fr) auto auto minmax(100px, 1fr) minmax(
 			100px,
 			1fr
 		) auto auto;
@@ -180,7 +295,7 @@
 	min-width: 0;
 }
 .sample-track-name span {
-	color: #d9f874;
+	color: var(--accent);
 	font-size: 24px;
 }
 .sample-track-name strong {
@@ -199,6 +314,27 @@
 	margin-top: 20px;
 	color: #a7aea8;
 	font-size: 13px;
+}
+.sound-matcher > p {
+	color: var(--studio-muted);
+	line-height: 1.6;
+	max-width: 700px;
+	margin: 8px 0 18px;
+}
+.sound-matcher .sample-actions {
+	flex-wrap: wrap;
+	margin: 18px 0;
+}
+.sound-matcher .sample-actions button {
+	border: 1px solid #ffffff35;
+	padding: 10px 14px;
+	border-radius: 7px;
+}
+.match-results {
+	margin-top: 20px;
+}
+.match-results audio {
+	max-width: 100%;
 }
 .visually-hidden {
 	position: absolute;

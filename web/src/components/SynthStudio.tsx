@@ -4,9 +4,9 @@ import {
 	defaultSynthPatch,
 	readSynthPatch,
 	synthStorageKey,
+	synthWaveformSchema,
 	type SynthPatch,
 } from "../audio/synthPatch";
-import { waveformSchema } from "../audio/patch";
 
 const keys = ["a", "w", "s", "e", "d", "f", "t", "g", "y", "h", "u", "j"];
 const names = [
@@ -89,7 +89,7 @@ export function SynthStudio() {
 	const update = <K extends keyof SynthPatch>(key: K, value: SynthPatch[K]) =>
 		setPatch((old) => ({ ...old, [key]: value }));
 	return (
-		<section className="sound-lab" aria-labelledby="synth-title">
+		<section className="sound-lab synth-studio" aria-labelledby="synth-title">
 			<header className="sound-lab-hero">
 				<div>
 					<span className="eyebrow">STUDIO · PLAYABLE SYNTH</span>
@@ -100,7 +100,7 @@ export function SynthStudio() {
 					</p>
 				</div>
 			</header>
-			<div className="sound-lab-grid">
+			<div className="synth-layout">
 				<div className="sound-controls">
 					<div className="sound-panel-heading">
 						<div>
@@ -119,21 +119,59 @@ export function SynthStudio() {
 						<select
 							value={patch.waveform}
 							onChange={(event) =>
-								update("waveform", waveformSchema.parse(event.target.value))
+								update(
+									"waveform",
+									synthWaveformSchema.parse(event.target.value),
+								)
 							}
 						>
-							{waveformSchema.options.map((wave) => (
+							{synthWaveformSchema.options.map((wave) => (
 								<option key={wave} value={wave}>
 									{wave}
 								</option>
 							))}
 						</select>
 					</label>
+					<label className="sound-field">
+						<span>Second oscillator waveform</span>
+						<select
+							aria-label="Second oscillator waveform"
+							value={patch.waveform2}
+							onChange={(event) =>
+								update(
+									"waveform2",
+									synthWaveformSchema.parse(event.target.value),
+								)
+							}
+						>
+							{synthWaveformSchema.options.map((wave) => (
+								<option key={wave} value={wave}>
+									{wave}
+								</option>
+							))}
+						</select>
+					</label>
+					<p className="synth-explainer">
+						Blend two waves. Detune shifts oscillator 2 in cents; 1,200 cents is
+						one octave. Select “harmonics” to shape the second and third
+						overtones.
+					</p>
+					<details className="synth-math"><summary>Show the maths</summary><p>Pitch: f = 440 × 2^((MIDI note − 69) / 12) Hz</p><p>Harmonic wave: sin(ωt) + H₂ sin(2ωt) + H₃ sin(3ωt), normalized.</p><p>Envelope: attack → decay → sustain, followed by release when you let go.</p><p>Filter movement: cutoff + depth × sin(2π × LFO rate × t). Drive uses a soft tanh curve.</p><p>Control changes affect the next note you play.</p></details>
 					{(
 						[
+							["oscMix", "Oscillator 2 mix", 0, 1, 0.01, ""],
+							["detune", "Oscillator 2 detune", -1200, 1200, 1, "cents"],
+							["harmonic2", "Second harmonic", 0, 1, 0.01, ""],
+							["harmonic3", "Third harmonic", 0, 1, 0.01, ""],
 							["cutoff", "Filter cutoff", 100, 10000, 100, "Hz"],
+							["resonance", "Filter resonance", 0, 12, 0.1, "Q"],
 							["attack", "Attack", 0.01, 1, 0.01, "s"],
+							["decay", "Decay", 0.01, 2, 0.01, "s"],
+							["sustain", "Sustain", 0, 1, 0.01, ""],
 							["release", "Release", 0.03, 2, 0.01, "s"],
+							["lfoRate", "Filter LFO rate", 0.1, 20, 0.1, "Hz"],
+							["lfoDepth", "Filter LFO depth", 0, 1, 0.01, ""],
+							["drive", "Distortion drive", 0, 1, 0.01, ""],
 							["volume", "Volume", 0, 0.25, 0.01, ""],
 						] as const
 					).map(([key, label, min, max, step, unit]) => (
@@ -161,64 +199,64 @@ export function SynthStudio() {
 						{status}
 					</p>
 				</div>
-				<div className="sound-output">
-					<span className="eyebrow">KEYBOARD · C4 TO B4</span>
-					<h2>Play a note</h2>
-					<p>
-						Use your mouse, touch, or the letters shown below. Lower the cutoff
-						for a darker sound.
-					</p>
-					<div className="synth-keys" aria-label="Piano keyboard">
-						{keys.map((key, index) => (
-							<button
-								key={key}
-								className={`synth-key ${[1, 3, 6, 8, 10].includes(index) ? "sharp" : ""} ${active === index ? "pressed" : ""}`}
-								aria-label={`${names[index]} 4, keyboard ${key.toUpperCase()}`}
-								aria-pressed={active === index}
-								onPointerDown={(event) => {
-									event.currentTarget.setPointerCapture(event.pointerId);
+			</div>
+			<div className="sound-output synth-keyboard-panel">
+				<span className="eyebrow">KEYBOARD · C4 TO B4</span>
+				<h2>Play a note</h2>
+				<p>
+					Use your mouse, touch, or the letters shown below. Lower the cutoff
+					for a darker sound.
+				</p>
+				<div className="synth-keys" aria-label="Piano keyboard">
+					{keys.map((key, index) => (
+						<button
+							key={key}
+							className={`synth-key ${[1, 3, 6, 8, 10].includes(index) ? "sharp" : ""} ${active === index ? "pressed" : ""}`}
+							aria-label={`${names[index]} 4, keyboard ${key.toUpperCase()}`}
+							aria-pressed={active === index}
+							onPointerDown={(event) => {
+								event.currentTarget.setPointerCapture(event.pointerId);
+								setActive(index);
+								void currentEngine()
+									.noteOn(60 + index, patch)
+									.catch(() =>
+										setStatus("Audio could not start. Try another key."),
+									);
+							}}
+							onPointerUp={() => {
+								engine.current?.noteOff(60 + index, patch.release);
+								setActive(null);
+							}}
+							onPointerCancel={() => {
+								engine.current?.noteOff(60 + index, patch.release);
+								setActive(null);
+							}}
+							onKeyDown={(event) => {
+								if (
+									(event.key === " " || event.key === "Enter") &&
+									!event.repeat
+								) {
+									event.preventDefault();
 									setActive(index);
 									void currentEngine()
 										.noteOn(60 + index, patch)
 										.catch(() =>
 											setStatus("Audio could not start. Try another key."),
 										);
-								}}
-								onPointerUp={() => {
+								}
+							}}
+							onKeyUp={(event) => {
+								if (event.key === " " || event.key === "Enter") {
+									event.preventDefault();
 									engine.current?.noteOff(60 + index, patch.release);
 									setActive(null);
-								}}
-								onPointerCancel={() => {
-									engine.current?.noteOff(60 + index, patch.release);
-									setActive(null);
-								}}
-								onKeyDown={(event) => {
-									if (
-										(event.key === " " || event.key === "Enter") &&
-										!event.repeat
-									) {
-										event.preventDefault();
-										setActive(index);
-										void currentEngine()
-											.noteOn(60 + index, patch)
-											.catch(() =>
-												setStatus("Audio could not start. Try another key."),
-											);
-									}
-								}}
-								onKeyUp={(event) => {
-									if (event.key === " " || event.key === "Enter") {
-										event.preventDefault();
-										engine.current?.noteOff(60 + index, patch.release);
-										setActive(null);
-									}
-								}}
-							>
-								<span>{names[index]}</span>
-								<small>{key.toUpperCase()}</small>
-							</button>
-						))}
-					</div>
+								}
+							}}
+						>
+							<span>{names[index]}</span>
+							<small>{key.toUpperCase()}</small>
+						</button>
+					))}
 				</div>
 			</div>
 		</section>
