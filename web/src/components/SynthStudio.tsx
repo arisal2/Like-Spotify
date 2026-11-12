@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { SynthEngine } from "../audio/synthEngine";
+import { renderSynthSample, SynthEngine } from "../audio/synthEngine";
 import {
 	defaultSynthPatch,
 	readSynthPatch,
@@ -24,10 +24,17 @@ const names = [
 	"B",
 ];
 
-export function SynthStudio() {
+export function SynthStudio({
+	onSendToEditor,
+}: {
+	onSendToEditor?: (audio: Blob, name: string) => void;
+}) {
 	const [patch, setPatch] = useState(() => readSynthPatch(window.localStorage));
 	const [status, setStatus] = useState("Play a key to start making sound.");
 	const [active, setActive] = useState<number | null>(null);
+	const [sampleNote, setSampleNote] = useState(60);
+	const [sampleDuration, setSampleDuration] = useState(1);
+	const [rendering, setRendering] = useState(false);
 	const engine = useRef<SynthEngine | null>(null);
 	const patchRef = useRef(patch);
 	patchRef.current = patch;
@@ -59,6 +66,7 @@ export function SynthStudio() {
 			if (index < 0) return;
 			event.preventDefault();
 			setActive(index);
+			setSampleNote(60 + index);
 			void currentEngine()
 				.noteOn(60 + index, patchRef.current)
 				.catch(() => setStatus("Audio could not start. Try another key."));
@@ -156,7 +164,22 @@ export function SynthStudio() {
 						one octave. Select “harmonics” to shape the second and third
 						overtones.
 					</p>
-					<details className="synth-math"><summary>Show the maths</summary><p>Pitch: f = 440 × 2^((MIDI note − 69) / 12) Hz</p><p>Harmonic wave: sin(ωt) + H₂ sin(2ωt) + H₃ sin(3ωt), normalized.</p><p>Envelope: attack → decay → sustain, followed by release when you let go.</p><p>Filter movement: cutoff + depth × sin(2π × LFO rate × t). Drive uses a soft tanh curve.</p><p>Control changes affect the next note you play.</p></details>
+					<details className="synth-math">
+						<summary>Show the maths</summary>
+						<p>Pitch: f = 440 × 2^((MIDI note − 69) / 12) Hz</p>
+						<p>
+							Harmonic wave: sin(ωt) + H₂ sin(2ωt) + H₃ sin(3ωt), normalized.
+						</p>
+						<p>
+							Envelope: attack → decay → sustain, followed by release when you
+							let go.
+						</p>
+						<p>
+							Filter movement: cutoff + depth × sin(2π × LFO rate × t). Drive
+							uses a soft tanh curve.
+						</p>
+						<p>Control changes affect the next note you play.</p>
+					</details>
 					{(
 						[
 							["oscMix", "Oscillator 2 mix", 0, 1, 0.01, ""],
@@ -207,6 +230,57 @@ export function SynthStudio() {
 					Use your mouse, touch, or the letters shown below. Lower the cutoff
 					for a darker sound.
 				</p>
+				{onSendToEditor && (
+					<div className="synth-sample-actions">
+						<label>
+							Note to sample
+							<select
+								aria-label="Note to sample"
+								value={sampleNote}
+								onChange={(event) => setSampleNote(Number(event.target.value))}
+							>
+								{names.map((name, index) => (
+									<option key={name} value={60 + index}>
+										{name} 4
+									</option>
+								))}
+							</select>
+						</label>
+						<label>
+							Note length (seconds)
+							<input
+								type="number"
+								min="0.1"
+								max="5"
+								step="0.1"
+								value={sampleDuration}
+								onChange={(event) =>
+									setSampleDuration(event.currentTarget.valueAsNumber)
+								}
+							/>
+						</label>
+						<button
+							disabled={rendering}
+							onClick={() => {
+								setRendering(true);
+								void renderSynthSample(sampleNote, patch, sampleDuration)
+									.then((audio) =>
+										onSendToEditor(audio, `Synth ${names[sampleNote - 60]} 4`),
+									)
+									.catch((error) =>
+										setStatus(
+											error instanceof Error
+												? error.message
+												: "Could not render the synth sample.",
+										),
+									)
+									.finally(() => setRendering(false));
+							}}
+						>
+							{rendering ? "Creating sample…" : "Add to sample editor"}
+						</button>
+					</div>
+				)}
 				<div className="synth-keys" aria-label="Piano keyboard">
 					{keys.map((key, index) => (
 						<button
@@ -217,6 +291,7 @@ export function SynthStudio() {
 							onPointerDown={(event) => {
 								event.currentTarget.setPointerCapture(event.pointerId);
 								setActive(index);
+								setSampleNote(60 + index);
 								void currentEngine()
 									.noteOn(60 + index, patch)
 									.catch(() =>
@@ -238,6 +313,7 @@ export function SynthStudio() {
 								) {
 									event.preventDefault();
 									setActive(index);
+									setSampleNote(60 + index);
 									void currentEngine()
 										.noteOn(60 + index, patch)
 										.catch(() =>

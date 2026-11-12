@@ -12,7 +12,7 @@
 
 ```text
 backend/              Go API, migrations, catalog, and tests
-web/                  React app, player, unit tests, and Playwright tests
+web/                  React studio, audio engine, unit tests, and Playwright tests
 deploy/k8s/           base, local, GitOps, media, and access manifests
 deploy/argocd/        Argo CD project, application, and local service
 .github/workflows/    CI, delivery, and release publishing
@@ -100,11 +100,11 @@ npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
-The CI workflow generates a deterministic 30-second PCM WAV using
-`web/e2e/generate-audio.mjs`, points only the test browser catalog at that file,
-and verifies that real media metadata loads. CI runs the browser against native
-Go and Vite with a MySQL service; production container builds run in a separate
-path-aware job. No copyrighted fixture is stored in Git.
+Studio browser tests use generated audio and a simulated microphone. Focused
+studio changes run their selected Chromium journeys against Vite without Go or
+MySQL. Shared changes and pull requests to `master` use the full browser job,
+which starts the API and a MySQL service. See [CI/CD](github-actions.md) for
+the selection rules. No copyrighted fixture is stored in Git.
 
 ### Kubernetes manifests
 

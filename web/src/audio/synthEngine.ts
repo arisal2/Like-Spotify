@@ -1,4 +1,5 @@
 import { synthPatchSchema, type SynthPatch } from "./synthPatch";
+import { encodeWav } from "./wav";
 
 type Voice = {
 	sources: OscillatorNode[];
@@ -16,6 +17,131 @@ export function distortionCurve(drive: number): Float32Array<ArrayBuffer> {
 		curve[i] = amount === 0 ? x : Math.tanh(x * factor) / Math.tanh(factor);
 	}
 	return curve;
+}
+
+function createVoice(
+	context: BaseAudioContext,
+	note: number,
+	patch: SynthPatch,
+	now: number,
+): Voice {
+	const first = context.createOscillator();
+	const second = context.createOscillator();
+	const lfo = context.createOscillator();
+	const firstLevel = context.createGain();
+	const secondLevel = context.createGain();
+	const lfoLevel = context.createGain();
+	const filter = context.createBiquadFilter();
+	const shaper = context.createWaveShaper();
+	const gain = context.createGain();
+	const limiter = context.createDynamicsCompressor();
+	const frequency = 440 * 2 ** ((note - 69) / 12);
+	const setWave = (
+		oscillator: OscillatorNode,
+		wave: SynthPatch["waveform"],
+	) => {
+		if (wave === "harmonics")
+			oscillator.setPeriodicWave(
+				context.createPeriodicWave(
+					new Float32Array([0, 0, 0, 0]),
+					new Float32Array([0, 1, patch.harmonic2, patch.harmonic3]),
+				),
+			);
+		else oscillator.type = wave;
+	};
+	setWave(first, patch.waveform);
+	setWave(second, patch.waveform2);
+	first.frequency.value = frequency;
+	second.frequency.value = frequency;
+	second.detune.value = patch.detune;
+	firstLevel.gain.value = 1 - patch.oscMix;
+	secondLevel.gain.value = patch.oscMix;
+	filter.type = "lowpass";
+	filter.frequency.value = patch.cutoff;
+	filter.Q.value = patch.resonance;
+	lfo.frequency.value = patch.lfoRate;
+	lfoLevel.gain.value = Math.min(patch.cutoff * 0.9, 4000) * patch.lfoDepth;
+	shaper.curve = distortionCurve(patch.drive);
+	limiter.threshold.value = -12;
+	limiter.knee.value = 0;
+	limiter.ratio.value = 20;
+	limiter.attack.value = 0.003;
+	limiter.release.value = 0.1;
+	gain.gain.setValueAtTime(0, now);
+	gain.gain.linearRampToValueAtTime(patch.volume, now + patch.attack);
+	gain.gain.linearRampToValueAtTime(
+		patch.volume * patch.sustain,
+		now + patch.attack + patch.decay,
+	);
+	first.connect(firstLevel).connect(filter);
+	second.connect(secondLevel).connect(filter);
+	lfo.connect(lfoLevel).connect(filter.frequency);
+	filter
+		.connect(shaper)
+		.connect(gain)
+		.connect(limiter)
+		.connect(context.destination);
+	const nodes: AudioNode[] = [
+		first,
+		second,
+		lfo,
+		firstLevel,
+		secondLevel,
+		lfoLevel,
+		filter,
+		shaper,
+		gain,
+		limiter,
+	];
+	first.onended = () => {
+		for (const node of nodes) node.disconnect();
+	};
+	first.start(now);
+	second.start(now);
+	lfo.start(now);
+	return { sources: [first, second, lfo], nodes, gain, note };
+}
+
+/** Render the same synth graph used for live notes, including its release tail. */
+export async function renderSynthSample(
+	note: number,
+	input: SynthPatch,
+	heldSeconds: number,
+): Promise<Blob> {
+	if (
+		!Number.isInteger(note) ||
+		note < 48 ||
+		note > 84 ||
+		!Number.isFinite(heldSeconds) ||
+		heldSeconds < 0.1 ||
+		heldSeconds > 5
+	)
+		throw new Error(
+			"Choose a valid note and duration between 0.1 and 5 seconds.",
+		);
+	const patch = synthPatchSchema.parse(input);
+	const sampleRate = 44100;
+	const total = heldSeconds + patch.release + 0.05;
+	const context = new OfflineAudioContext(
+		1,
+		Math.ceil(total * sampleRate),
+		sampleRate,
+	);
+	const voice = createVoice(context, note, patch, 0);
+	let level: number;
+	if (heldSeconds < patch.attack)
+		level = (patch.volume * heldSeconds) / patch.attack;
+	else if (heldSeconds < patch.attack + patch.decay)
+		level =
+			patch.volume *
+			(1 - ((1 - patch.sustain) * (heldSeconds - patch.attack)) / patch.decay);
+	else level = patch.volume * patch.sustain;
+	voice.gain.gain.cancelScheduledValues(heldSeconds);
+	voice.gain.gain.linearRampToValueAtTime(level, heldSeconds);
+	voice.gain.gain.linearRampToValueAtTime(0, heldSeconds + patch.release);
+	for (const source of voice.sources)
+		source.stop(heldSeconds + patch.release + 0.01);
+	return encodeWav(await context.startRendering());
 }
 
 /** One voice at a time; audio nodes never enter React state. */
@@ -36,82 +162,7 @@ export class SynthEngine {
 		if (context.state === "suspended") await context.resume();
 		if (generation !== this.generation || context.state === "closed") return;
 		this.pendingNote = undefined;
-		const now = context.currentTime;
-		const first = context.createOscillator();
-		const second = context.createOscillator();
-		const lfo = context.createOscillator();
-		const firstLevel = context.createGain();
-		const secondLevel = context.createGain();
-		const lfoLevel = context.createGain();
-		const filter = context.createBiquadFilter();
-		const shaper = context.createWaveShaper();
-		const gain = context.createGain();
-		const limiter = context.createDynamicsCompressor();
-		const frequency = 440 * 2 ** ((note - 69) / 12);
-		const setWave = (
-			oscillator: OscillatorNode,
-			wave: SynthPatch["waveform"],
-		) => {
-			if (wave === "harmonics")
-				oscillator.setPeriodicWave(
-					context.createPeriodicWave(
-						new Float32Array([0, 0, 0, 0]),
-						new Float32Array([0, 1, patch.harmonic2, patch.harmonic3]),
-					),
-				);
-			else oscillator.type = wave;
-		};
-		setWave(first, patch.waveform);
-		setWave(second, patch.waveform2);
-		first.frequency.value = frequency;
-		second.frequency.value = frequency;
-		second.detune.value = patch.detune;
-		firstLevel.gain.value = 1 - patch.oscMix;
-		secondLevel.gain.value = patch.oscMix;
-		filter.type = "lowpass";
-		filter.frequency.value = patch.cutoff;
-		filter.Q.value = patch.resonance;
-		lfo.frequency.value = patch.lfoRate;
-		lfoLevel.gain.value = Math.min(patch.cutoff * 0.9, 4000) * patch.lfoDepth;
-		shaper.curve = distortionCurve(patch.drive);
-		limiter.threshold.value = -12;
-		limiter.knee.value = 0;
-		limiter.ratio.value = 20;
-		limiter.attack.value = 0.003;
-		limiter.release.value = 0.1;
-		gain.gain.setValueAtTime(0, now);
-		gain.gain.linearRampToValueAtTime(patch.volume, now + patch.attack);
-		gain.gain.linearRampToValueAtTime(
-			patch.volume * patch.sustain,
-			now + patch.attack + patch.decay,
-		);
-		first.connect(firstLevel).connect(filter);
-		second.connect(secondLevel).connect(filter);
-		lfo.connect(lfoLevel).connect(filter.frequency);
-		filter
-			.connect(shaper)
-			.connect(gain)
-			.connect(limiter)
-			.connect(context.destination);
-		const nodes: AudioNode[] = [
-			first,
-			second,
-			lfo,
-			firstLevel,
-			secondLevel,
-			lfoLevel,
-			filter,
-			shaper,
-			gain,
-			limiter,
-		];
-		first.onended = () => {
-			for (const node of nodes) node.disconnect();
-		};
-		this.voice = { sources: [first, second, lfo], nodes, gain, note };
-		first.start(now);
-		second.start(now);
-		lfo.start(now);
+		this.voice = createVoice(context, note, patch, context.currentTime);
 	}
 
 	noteOff(note: number, release: number) {
