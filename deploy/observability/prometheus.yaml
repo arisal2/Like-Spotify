@@ -19,9 +19,7 @@ data:
         static_configs:
           - targets:
               - http://web.bedlam-like-music-test.svc.cluster.local:8080/health/web
-              - http://api.bedlam-like-music-test.svc.cluster.local:8081/health/ready
               - http://web.bedlam-like-music-production.svc.cluster.local:8080/health/web
-              - http://api.bedlam-like-music-production.svc.cluster.local:8081/health/ready
         relabel_configs:
           - source_labels: [__address__]
             target_label: __param_target

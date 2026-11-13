@@ -1,7 +1,7 @@
 name: Publish tagged release images
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
 permissions:
   contents: read
   packages: write
@@ -11,9 +11,6 @@ jobs:
   publish:
     needs: checks
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        component: [api, web]
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-qemu-action@v4
@@ -30,11 +27,11 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: .
-          file: ${{ matrix.component == 'api' && 'backend/Dockerfile' || 'web/Dockerfile' }}
+          file: web/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:${{ github.sha }}
-            ghcr.io/${{ steps.image.outputs.repository }}/${{ matrix.component }}:${{ github.ref_name }}
+            ghcr.io/${{ steps.image.outputs.repository }}/web:${{ github.sha }}
+            ghcr.io/${{ steps.image.outputs.repository }}/web:${{ github.ref_name }}
           provenance: true
           sbom: true

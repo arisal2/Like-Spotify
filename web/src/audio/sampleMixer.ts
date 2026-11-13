@@ -12,12 +12,18 @@ export class SampleMixer {
 		const context = this.context;
 		if (context.state === "suspended") await context.resume();
 		const tracks = samples.filter((sample) => !sample.muted);
-		const decoded = await Promise.all(
+		const results = await Promise.allSettled(
 			tracks.map(async (sample) => ({
 				sample,
 				buffer: await context.decodeAudioData(await sample.audio.arrayBuffer()),
 			})),
 		);
+		const decoded = results.flatMap((result) =>
+			result.status === "fulfilled" ? [result.value] : [],
+		);
+		const failed = tracks
+			.filter((_, index) => results[index].status === "rejected")
+			.map((sample) => sample.name);
 		if (generation !== this.generation || context.state === "closed") return;
 		const start = context.currentTime + 0.05;
 		for (const { sample, buffer } of decoded) {
@@ -46,6 +52,7 @@ export class SampleMixer {
 			};
 			source.start(start);
 		}
+		return { played: decoded.length, failed };
 	}
 	private stopSources() {
 		for (const source of this.sources) source.stop();

@@ -31,7 +31,6 @@ jobs:
       github.ref == format('refs/heads/{0}', inputs.source_branch)
     runs-on: ubuntu-latest
     outputs:
-      api: ${{ steps.paths.outputs.api }}
       web: ${{ steps.paths.outputs.web }}
       promote: ${{ steps.paths.outputs.promote }}
       images: ${{ steps.paths.outputs.images }}
@@ -46,7 +45,7 @@ jobs:
         shell: bash
         run: |
           # Compare against the last published source, covering failed/skipped runs
-          # and multi-commit pushes. A new deployment branch builds both images.
+          # and multi-commit pushes. A new deployment branch builds the frontend image.
           base=$(git hash-object -t tree /dev/null)
           bootstrap=true
           remote_status=0
@@ -64,23 +63,18 @@ jobs:
           fi
           git diff --name-only "$base" HEAD > /tmp/changed-paths
           selection=$(DELIVERY_BOOTSTRAP="$bootstrap" bash scripts/select-delivery-images.sh < /tmp/changed-paths)
-          api=$(printf '%s\n' "$selection" | sed -n 's/^api=//p')
           web=$(printf '%s\n' "$selection" | sed -n 's/^web=//p')
 
           images=false
-          if [ "$api" = true ] || [ "$web" = true ]; then images=true; fi
+          if [ "$web" = true ]; then images=true; fi
           promote=true # Record every tested source revision, even when images are reused.
 
           include='[]'
-          if [ "$api" = true ]; then
-            include=$(jq -c '. + [{"component":"api","dockerfile":"backend/Dockerfile"}]' <<< "$include")
-          fi
           if [ "$web" = true ]; then
             include=$(jq -c '. + [{"component":"web","dockerfile":"web/Dockerfile"}]' <<< "$include")
           fi
 
           {
-            echo "api=$api"
             echo "web=$web"
             echo "promote=$promote"
             echo "images=$images"
@@ -150,7 +144,6 @@ jobs:
         if: steps.revision.outputs.promote == 'true'
         env:
           DEPLOY_SHA: ${{ github.sha }}
-          API_CHANGED: ${{ needs.changes.outputs.api }}
           WEB_CHANGED: ${{ needs.changes.outputs.web }}
           TARGET_BRANCH: ${{ inputs.target_branch }}
           TARGET_OVERLAY: ${{ inputs.target_overlay }}
@@ -159,7 +152,6 @@ jobs:
         run: |
           if git ls-remote --exit-code --heads origin "refs/heads/${TARGET_BRANCH}" >/dev/null; then
             git fetch origin "refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
-            previous_api=$(git show "refs/remotes/origin/${TARGET_BRANCH}:${TARGET_OVERLAY}/kustomization.yaml" | awk '/newName: .*\/api$/ { getline; if ($1 == "newTag:") print $2 }')
             previous_web=$(git show "refs/remotes/origin/${TARGET_BRANCH}:${TARGET_OVERLAY}/kustomization.yaml" | awk '/newName: .*\/web$/ { getline; if ($1 == "newTag:") print $2 }')
             git switch -c "promote-${TARGET_ENVIRONMENT}" "refs/remotes/origin/${TARGET_BRANCH}"
             # Keep the deployment branch history while replacing its tree with
@@ -167,8 +159,7 @@ jobs:
             git read-tree --reset -u "$DEPLOY_SHA"
           else
             git switch -c "promote-${TARGET_ENVIRONMENT}"
-            if [ "$IMAGES_CHANGED" = 'true' ] && [ "$API_CHANGED" = 'true' ] && [ "$WEB_CHANGED" = 'true' ]; then
-              previous_api="$DEPLOY_SHA"
+            if [ "$IMAGES_CHANGED" = 'true' ] && [ "$WEB_CHANGED" = 'true' ]; then
               previous_web="$DEPLOY_SHA"
             else
               echo 'Cannot initialize an environment without existing immutable image tags.'
@@ -176,16 +167,13 @@ jobs:
             fi
           fi
 
-          api_tag="$previous_api"
           web_tag="$previous_web"
-          if [ "$API_CHANGED" = 'true' ]; then api_tag="$DEPLOY_SHA"; fi
           if [ "$WEB_CHANGED" = 'true' ]; then web_tag="$DEPLOY_SHA"; fi
-          if [ -z "$api_tag" ] || [ -z "$web_tag" ]; then
+          if [[ ! "$web_tag" =~ ^[0-9a-f]{40}$ ]]; then
             echo 'Could not determine the previously deployed image tags.'
             exit 1
           fi
 
-          sed -i "/newName: .*\/api$/ { n; s/newTag: .*/newTag: ${api_tag}/; }" "${TARGET_OVERLAY}/kustomization.yaml"
           sed -i "/newName: .*\/web$/ { n; s/newTag: .*/newTag: ${web_tag}/; }" "${TARGET_OVERLAY}/kustomization.yaml"
       - name: Record tested source
         if: steps.revision.outputs.promote == 'true'

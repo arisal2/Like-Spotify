@@ -69,17 +69,10 @@ First publish and configure the [CI/CD workflows](github-actions.md). Verify
 `deploy/test` contains the reviewed three-node manifests and full SHA image
 tags; an old deployment branch may contain a different topology.
 
-Create separate `app-secrets` Secrets in `bedlam-like-music-test` and
-`bedlam-like-music-production`. Each needs `MYSQL_PASSWORD`,
-`MYSQL_ROOT_PASSWORD`, and `DATABASE_DSN`. The DSN format is:
-
-```text
-bedlam_like_music:<environment-password>@tcp(mysql:3306)/bedlam_like_music?parseTime=true
-```
-
-Use distinct generated passwords. Create Secrets from a protected local file
-or a secret manager, and never commit that file. For private GHCR packages,
-configure image-pull credentials in each environment before synchronization.
+The frontend needs no application password or database Secret. For private GHCR
+packages, configure image-pull credentials in each environment before sync.
+Before the first backend-retirement sync, review retained claims and any custom
+StatefulSet retention settings as described in [operations](operations.md).
 
 ```bash
 kubectl apply -k deploy/argocd
@@ -99,17 +92,12 @@ kubectl get application -n argocd-production
 The `production-template` directory name is retained for compatibility; it now
 contains the second local instance's application and project configuration.
 
-## Media and storage
+## Browser and retained storage
 
-The default local-path storage class uses `WaitForFirstConsumer`, so claims
-bind on the selected worker. Application media and database volumes are
-separate for test and production. Verify placement with `kubectl get pods -n
-bedlam-like-music-test -o wide` and repeat for production.
-
-For test media import, use `deploy/k8s/media-import.yaml`. Its selector and
-toleration target the test worker. For a production import, change its namespace,
-selector, and toleration to production in a temporary copy. Delete only the
-utility pod after importing; retain the PVC.
+Studio samples are stored in each browser origin, not in the cluster. Existing
+legacy media is protected by the explicit retained-storage overlay, and old
+StatefulSet claims must be retained. Do not delete PVCs or namespaces as cleanup.
+See [operations](operations.md) for the retirement boundary and backup limitations.
 
 ## Recovery and upgrades
 

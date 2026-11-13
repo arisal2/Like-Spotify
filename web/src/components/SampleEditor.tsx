@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { encodeWav } from "../audio/wav";
+import { validateAudioFile } from "../audio/audioFile";
 import { WaveformTimeline } from "./WaveformTimeline";
 
 export function SampleEditor({
@@ -28,6 +29,7 @@ export function SampleEditor({
 	const editor = useRef<HTMLElement>(null);
 	useEffect(() => {
 		editor.current?.scrollIntoView({ block: "start" });
+		editor.current?.focus({ preventScroll: true });
 	}, [input]);
 	useEffect(() => {
 		const url = URL.createObjectURL(input.audio);
@@ -38,6 +40,9 @@ export function SampleEditor({
 		let active = true;
 		setBuffer(null);
 		setPlayhead(null);
+		setGain(1);
+		setSpeed(1);
+		setPreview("");
 		const context = new AudioContext();
 		void input.audio
 			.arrayBuffer()
@@ -119,9 +124,20 @@ export function SampleEditor({
 			setBusy(false);
 		}
 	}
+	async function replace(file: File) {
+		try {
+			await validateAudioFile(file);
+			onReplace(file);
+		} catch (error) {
+			setMessage(
+				error instanceof Error ? error.message : "Could not open audio.",
+			);
+		}
+	}
 	return (
 		<section
 			ref={editor}
+			tabIndex={-1}
 			className="sample-section sample-editor"
 			aria-labelledby="sample-editor-title"
 			onDragOver={(event) => {
@@ -130,17 +146,18 @@ export function SampleEditor({
 			onDrop={(event) => {
 				if (!event.dataTransfer.types.includes("Files")) return;
 				event.preventDefault();
+				if (event.dataTransfer.files.length !== 1) {
+					setMessage(
+						"Open one sound at a time here. Use Add samples to import multiple sounds into the library.",
+					);
+					return;
+				}
 				const file = event.dataTransfer.files[0];
-				if (
-					!file ||
-					!file.type.startsWith("audio/") ||
-					file.size === 0 ||
-					file.size > 20 * 1024 * 1024
-				) {
+				if (!file || file.size === 0 || file.size > 20 * 1024 * 1024) {
 					setMessage("Drop an audio file up to 20 MB.");
 					return;
 				}
-				onReplace(file);
+				void replace(file);
 			}}
 		>
 			<div className="sample-section-title">
@@ -160,14 +177,7 @@ export function SampleEditor({
 							accept="audio/*"
 							onChange={(event) => {
 								const file = event.currentTarget.files?.[0];
-								if (
-									file &&
-									file.type.startsWith("audio/") &&
-									file.size > 0 &&
-									file.size <= 20 * 1024 * 1024
-								)
-									onReplace(file);
-								else if (file) setMessage("Choose an audio file up to 20 MB.");
+								if (file) void replace(file);
 								event.currentTarget.value = "";
 							}}
 						/>

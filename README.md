@@ -13,7 +13,7 @@ Studio samples and settings are stored in your browser. See the [studio guide](d
 
 ## Getting started
 
-The project uses React and TypeScript for the studio, with an existing Go API and MySQL service. Start with the [development guide](docs/development.md) for setup and testing.
+The studio uses React, TypeScript, and native browser audio, served by nginx. No backend or database is required. Start with the [development guide](docs/development.md) for setup and testing.
 
 ## Deployment
 

@@ -7,9 +7,8 @@ web/dist/
 web/test-results/
 web/playwright-report/
 *.tsbuildinfo
-backend/server
-coverage.out
 .DS_Store
+# Retired local credentials remain ignored even after backend removal.
 deploy/k8s/local/secrets.env
 assets/
 media-backup/

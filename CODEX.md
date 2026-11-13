@@ -36,6 +36,13 @@ inside an approved task may be selected using established repository patterns.
 
 ## Current status
 
+As of 2026-11-13, the Producer approved a frontend-only studio and removal of
+unused legacy player/Go/MySQL infrastructure after browser repairs. Samples use
+IndexedDB; no accounts or remote project service are currently implemented.
+Older milestone descriptions below are historical proposals, not current runtime
+requirements. See `docs/architecture.md` and STUDIO-CLEANUP-001.
+
+
 - Product direction: Bedlam-Like-Music Studio, pending Producer approval of the PRD details.
 - Proposed MVP: Game Sound Lab.
 - Current player, authentication, API, CI/CD, Kubernetes, and Argo CD are the

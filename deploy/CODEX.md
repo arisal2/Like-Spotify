@@ -15,6 +15,11 @@ Read the repository-root `CODEX.md` first.
 
 ## Constraints
 
+The application is frontend-only. Do not restore API/database/migration dependencies.
+The retained-storage overlay deliberately preserves legacy media during retirement;
+it is not used by the studio. No live PVC/volume/data deletion is authorized.
+
+
 - Preserve non-root execution, read-only filesystems, dropped capabilities,
   resource limits, health probes, service-account restrictions, and network
   policies.

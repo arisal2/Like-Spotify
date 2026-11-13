@@ -49,7 +49,6 @@
 }
 .synth-layout {
 	margin-top: 18px;
-	order: 2;
 }
 .synth-studio {
 	display: flex;
@@ -77,7 +76,6 @@
 }
 .synth-keyboard-panel {
 	margin-top: 18px;
-	order: 1;
 }
 .synth-sample-actions {
 	display: flex;
@@ -107,6 +105,16 @@
 	border-radius: 7px;
 	padding: 11px 16px;
 	font-weight: 700;
+}
+.synth-phrase {
+	margin-top: 24px;
+	padding-top: 20px;
+	border-top: 1px solid #ffffff25;
+}
+.synth-phrase p {
+	margin-top: 8px;
+	color: var(--studio-muted);
+	line-height: 1.6;
 }
 .editor-original {
 	display: grid;
@@ -316,13 +324,13 @@
 	gap: 8px;
 	margin-top: 30px;
 }
-.sample-sidebar nav button {
+.sample-sidebar nav a {
 	text-align: left;
 	padding: 14px;
 	border-radius: 8px;
 	color: #b3bab3;
 }
-.sample-sidebar nav button.selected {
+.sample-sidebar nav a.active {
 	background: var(--accent);
 	color: var(--studio-ink);
 	font-weight: 700;
@@ -332,6 +340,8 @@
 	letter-spacing: 0;
 }
 .sample-main {
+	container-type: inline-size;
+	width: 100%;
 	flex: 1;
 	min-width: 0;
 	padding: clamp(24px, 5vw, 72px);
@@ -381,6 +391,9 @@
 .sample-section {
 	border-top: 1px solid #ffffff20;
 	padding: 30px 0;
+}
+.sample-section.sample-editor {
+	padding: clamp(20px, 3vw, 32px);
 }
 .sample-section h2 {
 	margin: 8px 0;
@@ -513,6 +526,15 @@
 	clip-path: inset(50%);
 	white-space: nowrap;
 }
+@media (max-width: 1100px) {
+	.sample-track {
+		grid-template-columns: minmax(0, 1fr) auto auto;
+	}
+	.sample-track label {
+		grid-row: 2;
+		min-width: 0;
+	}
+}
 @media (max-width: 760px) {
 	.sample-app {
 		flex-direction: column;
@@ -524,6 +546,7 @@
 	}
 	.sample-sidebar nav {
 		display: flex;
+		flex-wrap: wrap;
 		margin-top: 8px;
 	}
 	.sample-note {
@@ -539,5 +562,59 @@
 	}
 	.sample-track label {
 		grid-row: 2;
+	}
+}
+
+/* Studio component colors follow the selected palette, including theory. */
+.sample-app .sound-lab-hero {
+	background: linear-gradient(125deg, var(--studio-panel), var(--studio-bg));
+	border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.sample-app .sound-field select,
+.sample-section form input {
+	background: var(--studio-bg);
+}
+.sample-app .sound-field,
+.sample-app .sound-lab-hero p,
+.sample-header p,
+.sample-section-title p,
+.sample-hint,
+.sample-track label,
+.sample-status,
+.sample-empty {
+	color: var(--studio-muted);
+}
+.sample-upload:focus-within {
+	outline-color: var(--accent);
+}
+.sample-sidebar nav a:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+}
+
+.sample-app .sound-lab {
+	padding: 0;
+}
+@container (max-width: 620px) {
+	.synth-keyboard-panel .synth-keys {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 6px;
+	}
+	.sample-app .synth-keyboard-panel {
+		padding: 12px;
+	}
+	.synth-keyboard-panel .synth-key {
+		font-size: 11px;
+		min-height: 100px;
+	}
+	.synth-keyboard-panel .synth-key.sharp {
+		min-height: 85px;
+	}
+	.sample-section form {
+		max-width: 100%;
+	}
+	.sample-section form input {
+		min-width: 0;
+		flex: 1;
 	}
 }

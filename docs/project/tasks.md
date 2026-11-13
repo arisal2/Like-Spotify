@@ -1,6 +1,82 @@
 # Bedlam-Like-Music Studio task board
 
-Last updated: 2026-11-09
+Last updated: 2026-11-13
+
+## Approved sequential studio repairs
+
+Producer approved implementing the studio assessment sequentially on 2026-11-13.
+First slice: AUDIO-FIX-001 — restore same-origin microphone and local audio
+playback through nginx, with a native-recording browser smoke. Status: Review.
+Validation: frontend lint/build/unit tests and the nginx-served native microphone,
+original playback, edited preview, save/reload browser smoke passed. Tested in a
+temporary container; Kubernetes remains on its existing image.
+Subsequent slices cover sample handling, layout, and polyphonic phrase capture;
+keep them separate from this deployment-policy repair. No publishing requested.
+
+AUDIO-FIX-002 — sample import/editor/mixer reliability. Status: Review.
+Imports validate decodability instead of trusting MIME metadata; batch errors
+remain visible. Multi-file editor drops explain the single-sound boundary.
+Replacement resets level/speed, mixer changes persist serially as field patches,
+and legacy invalid samples are identified without blocking playable tracks.
+Validation: four focused sample browser tests (including slow storage), frontend
+lint/build, and 22 unit tests passed. No deployment or publishing performed.
+
+## Approved cleanup after browser fixes
+
+AUDIO-FIX-003 — studio layout, themes, and accessibility. Status: Review.
+Samples, Synth, and Theory now share navigation/theme ownership. Removed floating
+Theory navigation; repaired tablet mixer overflow and editor padding. Synth keys
+wrap based on available width, and DOM/Tab order follows their visual order.
+Editor opening/closing manages focus; mute labels identify their sample.
+Validation: 8 affected browser journeys, 22 unit tests, lint/build passed; populated
+layouts checked at 320/390/768/900/1440 px. Mobile synth and Retro Theory screenshots
+reviewed. Polyphonic phrase capture is tracked below, before cleanup.
+
+AUDIO-FIX-004 — polyphonic synth and phrase capture. Status: Review.
+Independent voices and input-source ownership support chords and individual releases.
+Bounded phrase capture preserves note timings and per-note patch snapshots; offline
+rendering sends each take to the existing editor for separate library saves.
+Capture stops on blur/hidden tab and closes held notes. Limits: 12 simultaneous
+pitches, 30 seconds/128 note events per take; unsaved takes remain session-only.
+Validation: 9 affected browser journeys passed (7.7 seconds), including native
+frequency checks for simultaneous pitches/independent release, rendered phrase
+content, and two takes surviving reload. All 26 unit tests, lint/build passed.
+No publishing or deployment performed. Next slice: STUDIO-CLEANUP-001.
+
+Producer approved on 2026-11-13: remove the unused backend rather than retaining
+it for hypothetical future features. Schedule after the browser studio fixes.
+
+STUDIO-CLEANUP-001 — remove legacy player, Go API, and MySQL. Status: Review;
+source implementation follows the browser repairs. Scope:
+
+- Remove unmounted player UI, obsolete API clients, backend code, database
+  migrations, and their dependencies/tests after checking remaining references.
+- Remove API/database services, proxy routes, runtime secrets/config references,
+  migrations, storage resources, and obsolete health probes from Compose and
+  Kubernetes/GitOps templates.
+- Update CI/CD build selection, image publishing, security/dependency automation,
+  observability targets, and documentation for the frontend-only studio.
+- Verify recording, synthesis, editing, mixing, and browser persistence work
+  without an API or database; keep frontend health probes and delivery intact.
+
+Implementation approval does not authorize deleting persistent volumes, user
+media/backups, or live data. Inventory those separately before runtime cleanup.
+No replacement backend, Redis, or other service is required for this scope.
+Publishing and deployment still require the Producer's explicit instruction.
+
+Implementation evidence (2026-11-13): removed backend/player code, database and
+migration workloads, proxy upstreams, unused dependencies, and legacy CSS.
+Delivery builds/promotes only web; browser CI needs no API/database and includes
+the native recording smoke through nginx for full runs. Retained media PVCs are
+explicitly protected. Read-only inspection confirmed both live MySQL workloads
+use Retain/Retain and their PVCs have no deletion owner references.
+Validation: 16 current audio/data unit tests, lint/build, shell selectors, workflow
+YAML/shell syntax, all seven Kustomize renders, Compose web-only config, health200,
+and retired-route 404 checks passed. The nginx suite initially passed 9 checks;
+after fixing test-only blob inspection to respect CSP, all 3 synth checks passed
+on focused rerun. Existing browser data, backups, local credentials, volumes,
+and live workloads were not changed. Producer subsequently requested pushing
+the completed changes to development; no Actions-run inspection was requested.
 
 No implementation task below is approved merely by appearing on this board.
 The Producer moves a task to Ready by approving its scope and any linked

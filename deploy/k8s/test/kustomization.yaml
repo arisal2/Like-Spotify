@@ -2,21 +2,14 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: bedlam-like-music-test
 resources:
-  - ../remote
+  - ../base
+  - ../retained-storage
   - ../local-access
 images:
-  - name: bedlam-like-music-api:local
-    newName: ghcr.io/arisal2/bedlam-like-music/api
-    newTag: 9eb9c50f12c01d4800f30b5c0ebda7f325567757
   - name: bedlam-like-music-web:local
     newName: ghcr.io/arisal2/bedlam-like-music/web
-    newTag: 9fdd21e0cee0e45db196ba0a64b31e86c747835d
+    newTag: 3906feff6af934a63830ba5b2781f058091a628d
 patches:
-  - path: config-patch.yaml
-  - path: observability-api-ingress-patch.yaml
-    target:
-      kind: NetworkPolicy
-      name: api
   - target:
       kind: Namespace
     patch: |-
@@ -26,7 +19,7 @@ patches:
         name: bedlam-like-music
       $patch: delete
   - target:
-      kind: (Deployment|StatefulSet|Job)
+      kind: Deployment
     patch: |-
       - op: add
         path: /spec/template/spec/nodeSelector

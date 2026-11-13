@@ -1,0 +1,13 @@
+# Retirement safeguard: do not prune existing user media during backend removal.
+# The studio does not mount or use this claim. Remove only after separate data review.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi

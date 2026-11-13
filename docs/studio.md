@@ -28,6 +28,6 @@ Open `/studio/theory` or choose **Music theory** in the studio. Select a key and
 
 ## Storage and themes
 
-Imported and recorded samples, album membership, and mixer settings use IndexedDB. Synth patches and the selected theme use browser local storage. They are specific to the browser and device; they do not synchronize with the Go API or MySQL. Browser data eviction or clearing site data can remove them. Keep source files separately.
+Imported and recorded samples, album membership, and mixer settings use IndexedDB. Synth patches and the selected theme use browser local storage. They are specific to the browser and device; there is no server-side library or synchronization service. Browser data eviction or clearing site data can remove them. Keep source files separately.
 
 Choose Moss, Cyberpunk, Retro, or Ocean from the theme selector. Only import or record audio you have permission to use.

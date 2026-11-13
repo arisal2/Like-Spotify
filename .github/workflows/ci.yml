@@ -10,16 +10,13 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.paths.outputs.backend }}
       frontend: ${{ steps.paths.outputs.frontend }}
-      browser: ${{ steps.paths.outputs.browser }}
       browser-mode: ${{ steps.paths.outputs.browser_mode }}
       browser-specs: ${{ steps.paths.outputs.browser_specs }}
       kubernetes: ${{ steps.paths.outputs.kubernetes }}
       security: ${{ steps.paths.outputs.security }}
       documentation: ${{ steps.paths.outputs.documentation }}
       container-images: ${{ steps.paths.outputs.container-images }}
-      container-matrix: ${{ steps.paths.outputs.container-matrix }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,125 +32,49 @@ jobs:
           CURRENT_SHA: ${{ github.sha }}
           BASE_REF: ${{ github.base_ref }}
         run: |
-          backend=false
-          frontend=false
-          browser=false
-          kubernetes=false
-          security=false
-          documentation=false
-          container_api=false
-          container_web=false
-          force_full=false
-
-          if [ "$EVENT_NAME" != 'push' ] && [ "$EVENT_NAME" != 'pull_request' ]; then
-            backend=true
-            frontend=true
-            browser=true
-            kubernetes=true
-            security=true
-            documentation=true
-            container_api=true
-            container_web=true
-            force_full=true
+          frontend=false; kubernetes=false; security=false; documentation=false
+          container_web=false; force_full=false
+          if [ "$EVENT_NAME" != push ] && [ "$EVENT_NAME" != pull_request ]; then
+            frontend=true; kubernetes=true; security=true; documentation=true
+            container_web=true; force_full=true
             : > /tmp/changed-paths
           else
-            if [ "$EVENT_NAME" = 'pull_request' ]; then
-              base="$PR_BASE_SHA"
-              head="$PR_HEAD_SHA"
+            if [ "$EVENT_NAME" = pull_request ]; then
+              base="$PR_BASE_SHA"; head="$PR_HEAD_SHA"
             else
-              base="$BEFORE_SHA"
-              head="$CURRENT_SHA"
-              if [ -z "$base" ] || [ "$base" = '0000000000000000000000000000000000000000' ]; then
+              base="$BEFORE_SHA"; head="$CURRENT_SHA"
+              if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ]; then
                 base=$(git hash-object -t tree /dev/null)
               fi
             fi
-
             git diff --name-only "$base" "$head" > /tmp/changed-paths
             while IFS= read -r path; do
               case "$path" in
-                backend/*)
-                  backend=true; browser=true; security=true; container_api=true ;;
-                web/*)
-                  frontend=true; browser=true; security=true; container_web=true ;;
-                deploy/*)
-                  kubernetes=true; security=true ;;
+                web/*) frontend=true; security=true; container_web=true ;;
+                deploy/*) kubernetes=true; security=true ;;
                 scripts/select-studio-tests.sh|scripts/test-select-studio-tests.sh|scripts/select-delivery-images.sh|scripts/test-select-delivery-images.sh)
                   security=true ;;
-                .github/workflows/*|scripts/*)
-                  backend=true; frontend=true; browser=true; kubernetes=true; security=true; container_api=true; container_web=true ;;
-                .dockerignore)
-                  backend=true; frontend=true; browser=true; security=true; container_api=true; container_web=true ;;
-                .github/dependabot.yml|compose.yaml|.env.example)
-                  backend=true; frontend=true; browser=true; security=true ;;
-                *.md|docs/*)
-                  documentation=true ;;
-                *)
-                  security=true ;;
+                .github/workflows/*|scripts/*|compose.yaml)
+                  frontend=true; kubernetes=true; security=true; force_full=true ;;
+                .dockerignore) frontend=true; security=true; container_web=true; force_full=true ;;
+                .github/dependabot.yml) security=true ;;
+                *.md|docs/*) documentation=true ;;
+                *) security=true ;;
               esac
             done < /tmp/changed-paths
           fi
-
-          if [ "$EVENT_NAME" = 'pull_request' ] && [ "$BASE_REF" = 'master' ]; then force_full=true; fi
+          if [ "$EVENT_NAME" = pull_request ] && [ "$BASE_REF" = master ]; then force_full=true; fi
           FORCE_FULL_BROWSER="$force_full" bash scripts/select-studio-tests.sh < /tmp/changed-paths >> "$GITHUB_OUTPUT"
           bash scripts/test-select-studio-tests.sh
           bash scripts/test-select-delivery-images.sh
-
-          container_images=false
-          container_include='[]'
-          if [ "$container_api" = true ]; then
-            container_images=true
-            container_include=$(jq -c '. + [{"component":"api","dockerfile":"backend/Dockerfile"}]' <<< "$container_include")
-          fi
-          if [ "$container_web" = true ]; then
-            container_images=true
-            container_include=$(jq -c '. + [{"component":"web","dockerfile":"web/Dockerfile"}]' <<< "$container_include")
-          fi
-
           {
-            echo "backend=$backend"
             echo "frontend=$frontend"
-            echo "browser=$browser"
             echo "kubernetes=$kubernetes"
             echo "security=$security"
             echo "documentation=$documentation"
-            echo "container-images=$container_images"
-            echo "container-matrix={\"include\":$container_include}"
+            echo "container-images=$container_web"
           } >> "$GITHUB_OUTPUT"
 
-  backend:
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: ci-test-password
-          MYSQL_ROOT_HOST: "%"
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -pci-test-password"
-          --health-interval=5s --health-timeout=3s --health-retries=30
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.27.3"
-          cache-dependency-path: backend/go.sum
-      - run: test -z "$(gofmt -l .)"
-      - run: go vet ./...
-      - run: go test -race ./...
-        env:
-          TEST_MYSQL_DSN: "root:ci-test-password@tcp(127.0.0.1:3306)/?parseTime=true"
-      - name: Check Go dependencies for known vulnerabilities
-        uses: golang/govulncheck-action@v1
-        with:
-          go-package: ./...
-          work-dir: backend
   frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
@@ -174,111 +95,10 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
-  dependency-review:
-    needs: changes
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Block newly introduced vulnerable dependencies
-        uses: actions/dependency-review-action@v5
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: always
-          # GitHub's dependency graph currently misses the MIT metadata for
-          # these two official actions. Keep this exception package-specific.
-          allow-dependencies-licenses: >-
-            pkg:githubactions/actions/checkout,
-            pkg:githubactions/azure/setup-kubectl
+
   browser:
     needs: changes
-    if: needs.changes.outputs.browser-mode == 'full'
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_DATABASE: bedlam_like_music
-          MYSQL_ROOT_PASSWORD: ci-test-password
-          MYSQL_ROOT_HOST: "%"
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -pci-test-password"
-          --health-interval=5s --health-timeout=3s --health-retries=30
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.27.3"
-          cache-dependency-path: backend/go.sum
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "26"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm install --global npm@12.2.2
-      - run: npm ci
-        working-directory: web
-      - name: Generate disposable audio fixture
-        run: |
-          mkdir -p assets/music assets/images/artwork
-          node web/e2e/generate-audio.mjs assets/music/ci-tone.wav
-      - name: Build and migrate API
-        working-directory: backend
-        env:
-          DATABASE_DSN: "root:ci-test-password@tcp(127.0.0.1:3306)/bedlam_like_music?parseTime=true"
-        run: |
-          go build -o /tmp/bedlam-like-music-api ./cmd/server
-          /tmp/bedlam-like-music-api migrate
-      - name: Start API and Vite
-        env:
-          DATABASE_DSN: "root:ci-test-password@tcp(127.0.0.1:3306)/bedlam_like_music?parseTime=true"
-          APP_ORIGIN: "http://127.0.0.1:5173"
-          MEDIA_DIR: ${{ github.workspace }}/assets
-        run: |
-          /tmp/bedlam-like-music-api >/tmp/bedlam-like-music-api.log 2>&1 &
-          echo $! >/tmp/bedlam-like-music-api.pid
-          (cd web && npm run dev >/tmp/bedlam-like-music-web.log 2>&1 & echo $! >/tmp/bedlam-like-music-web.pid)
-      - name: Wait for application
-        run: |
-          for attempt in $(seq 1 60); do
-            if curl --fail http://127.0.0.1:5173/api/v1/catalog >/dev/null; then exit 0; fi
-            sleep 1
-          done
-          cat /tmp/bedlam-like-music-api.log /tmp/bedlam-like-music-web.log
-          exit 1
-      - name: Cache Playwright browser
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('web/package-lock.json') }}
-      - run: npx playwright install chromium
-        working-directory: web
-      - run: npm run test:e2e
-        working-directory: web
-        env:
-          E2E_AUDIO_FIXTURE: "1"
-          E2E_BASE_URL: "http://127.0.0.1:5173"
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: browser-failure
-          path: web/test-results
-      - name: Show service logs
-        if: failure()
-        run: cat /tmp/bedlam-like-music-api.log /tmp/bedlam-like-music-web.log
-      - name: Stop test services
-        if: always()
-        run: |
-          if [ -f /tmp/bedlam-like-music-api.pid ]; then kill "$(cat /tmp/bedlam-like-music-api.pid)" || true; fi
-          if [ -f /tmp/bedlam-like-music-web.pid ]; then kill "$(cat /tmp/bedlam-like-music-web.pid)" || true; fi
-
-  browser-studio:
-    needs: changes
-    if: needs.changes.outputs.browser-mode == 'studio'
+    if: needs.changes.outputs.browser-mode != 'none'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -299,44 +119,58 @@ jobs:
       - name: Run selected studio journeys
         working-directory: web
         env:
-          E2E_BASE_URL: http://127.0.0.1:5173
+          BROWSER_MODE: ${{ needs.changes.outputs.browser-mode }}
           STUDIO_SPECS: ${{ needs.changes.outputs.browser-specs }}
         run: |
-          npm run dev > /tmp/bedlam-studio.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          if [ "$BROWSER_MODE" = full ]; then
+            npm run build
+            docker run --detach --rm --name studio-browser --read-only --tmpfs /tmp \
+              --cap-drop ALL --security-opt no-new-privileges:true \
+              --publish 127.0.0.1:18080:8080 \
+              --volume "$GITHUB_WORKSPACE/web/dist:/usr/share/nginx/html:ro" \
+              --volume "$GITHUB_WORKSPACE/web/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+              nginxinc/nginx-unprivileged:1.31-alpine
+            trap 'docker stop studio-browser >/dev/null 2>&1 || true' EXIT
+            export E2E_BASE_URL=http://127.0.0.1:18080 DEPLOYED_AUDIO_SMOKE=1
+          else
+            npm run dev > /tmp/bedlam-studio.log 2>&1 &
+            server_pid=$!
+            trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+            export E2E_BASE_URL=http://127.0.0.1:5173
+          fi
           for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:5173/ >/dev/null; then break; fi
-            if [ "$attempt" = 60 ]; then cat /tmp/bedlam-studio.log; exit 1; fi
+            if curl --fail --silent "$E2E_BASE_URL/" >/dev/null; then break; fi
+            if [ "$attempt" = 60 ]; then exit 1; fi
             sleep 1
           done
-          # The selector emits only fixed repository-owned spec paths.
-          read -r -a specs <<< "$STUDIO_SPECS"
-          [ "${#specs[@]}" -gt 0 ]
-          npx playwright test "${specs[@]}"
+          if [ "$BROWSER_MODE" = full ]; then
+            npx playwright test
+          else
+            read -r -a specs <<< "$STUDIO_SPECS"
+            [ "${#specs[@]}" -gt 0 ]
+            npx playwright test "${specs[@]}"
+          fi
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: studio-browser-failure
+          name: browser-failure
           path: web/test-results
 
   containers:
     needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.container-images == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{ fromJSON(needs.changes.outputs.container-matrix) }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v7
         with:
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: web/Dockerfile
           push: false
-          tags: bedlam-like-music-${{ matrix.component }}:ci
-          cache-from: type=gha,scope=${{ matrix.component }}-amd64
-          cache-to: type=gha,mode=max,scope=${{ matrix.component }}-amd64
+          tags: bedlam-like-music-web:ci
+          cache-from: type=gha,scope=web-amd64
+          cache-to: type=gha,mode=max,scope=web-amd64
 
   kubernetes:
     needs: changes
@@ -345,21 +179,39 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: azure/setup-kubectl@v5
-      - run: kubectl kustomize deploy/k8s/base > /tmp/base.yaml
-      - run: cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
-      - run: kubectl kustomize deploy/k8s/local > /tmp/local.yaml
-      - run: kubectl kustomize deploy/k8s/test > /tmp/test.yaml
-      - run: kubectl kustomize deploy/k8s/production > /tmp/production.yaml
-      - run: kubectl kustomize deploy/argocd > /tmp/argocd.yaml
-      - run: kubectl kustomize deploy/argocd/production-template > /tmp/argocd-production.yaml
+      - name: Render application, Argo CD, and observability
+        run: |
+          for overlay in base local test production; do
+            kubectl kustomize "deploy/k8s/$overlay" > "/tmp/$overlay.yaml"
+          done
+          kubectl kustomize deploy/argocd > /tmp/argocd.yaml
+          kubectl kustomize deploy/argocd/production-template > /tmp/argocd-production.yaml
+          kubectl kustomize deploy/observability > /tmp/observability.yaml
+
+  dependency-review:
+    needs: changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: always
+          # Official MIT-licensed Actions with missing dependency graph metadata.
+          allow-dependencies-licenses: >-
+            pkg:githubactions/actions/checkout,
+            pkg:githubactions/azure/setup-kubectl
+
   security-config:
     needs: changes
     if: needs.changes.outputs.security == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Scan repository and deployment configuration
-        uses: aquasecurity/trivy-action@v0.36.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -383,18 +235,15 @@ jobs:
       - run: npm install --global npm@12.2.2
       - run: npm ci
         working-directory: web
-      - name: Check Markdown formatting
-        run: web/node_modules/.bin/prettier --check README.md SECURITY.md docs/*.md
+      - run: web/node_modules/.bin/prettier --check README.md SECURITY.md docs/*.md
 
   ci-gate:
     if: always()
     needs:
       [
         changes,
-        backend,
         frontend,
         browser,
-        browser-studio,
         containers,
         kubernetes,
         security-config,
@@ -406,17 +255,14 @@ jobs:
       - name: Require every selected check to pass
         env:
           CHANGES: ${{ needs.changes.result }}
-          BACKEND: ${{ needs.backend.result }}
           FRONTEND: ${{ needs.frontend.result }}
           BROWSER: ${{ needs.browser.result }}
-          BROWSER_STUDIO: ${{ needs.browser-studio.result }}
           BROWSER_MODE: ${{ needs.changes.outputs.browser-mode }}
           CONTAINERS: ${{ needs.containers.result }}
           KUBERNETES: ${{ needs.kubernetes.result }}
           SECURITY: ${{ needs.security-config.result }}
           DOCUMENTATION: ${{ needs.documentation.result }}
           DEPENDENCIES: ${{ needs.dependency-review.result }}
-          EXPECT_BACKEND: ${{ needs.changes.outputs.backend }}
           EXPECT_FRONTEND: ${{ needs.changes.outputs.frontend }}
           EXPECT_KUBERNETES: ${{ needs.changes.outputs.kubernetes }}
           EXPECT_SECURITY: ${{ needs.changes.outputs.security }}
@@ -424,15 +270,12 @@ jobs:
           EXPECT_CONTAINERS: ${{ github.event_name == 'pull_request' && needs.changes.outputs.container-images == 'true' }}
           EXPECT_DEPENDENCIES: ${{ github.event_name == 'pull_request' }}
         run: |
-          [ "$CHANGES" = 'success' ]
+          [ "$CHANGES" = success ]
           require_selected() {
-            local name="$1" expected="$2" result="$3"
-            if [ "$expected" = true ] && [ "$result" != success ]; then
-              echo "$name was selected but did not succeed: $result"
-              exit 1
+            if [ "$2" = true ] && [ "$3" != success ]; then
+              echo "$1 was selected but did not succeed: $3"; exit 1
             fi
           }
-          require_selected backend "$EXPECT_BACKEND" "$BACKEND"
           require_selected frontend "$EXPECT_FRONTEND" "$FRONTEND"
           require_selected kubernetes "$EXPECT_KUBERNETES" "$KUBERNETES"
           require_selected security "$EXPECT_SECURITY" "$SECURITY"
@@ -440,16 +283,12 @@ jobs:
           require_selected containers "$EXPECT_CONTAINERS" "$CONTAINERS"
           require_selected dependency-review "$EXPECT_DEPENDENCIES" "$DEPENDENCIES"
           case "$BROWSER_MODE" in
-            full) [ "$BROWSER" = success ] && [ "$BROWSER_STUDIO" = skipped ] ;;
-            studio) [ "$BROWSER_STUDIO" = success ] && [ "$BROWSER" = skipped ] ;;
-            none) [ "$BROWSER" = skipped ] && [ "$BROWSER_STUDIO" = skipped ] ;;
-            *) echo 'Unknown browser test selection'; exit 1 ;;
+            full|studio) [ "$BROWSER" = success ] ;;
+            none) [ "$BROWSER" = skipped ] ;;
+            *) exit 1 ;;
           esac
-          for result in "$BACKEND" "$FRONTEND" "$BROWSER" "$BROWSER_STUDIO" "$CONTAINERS" "$KUBERNETES" "$SECURITY" "$DOCUMENTATION" "$DEPENDENCIES"; do
-            if [ "$result" != 'success' ] && [ "$result" != 'skipped' ]; then
-              echo "A selected CI job did not pass: $result"
-              exit 1
-            fi
+          for result in "$FRONTEND" "$BROWSER" "$CONTAINERS" "$KUBERNETES" "$SECURITY" "$DOCUMENTATION" "$DEPENDENCIES"; do
+            if [ "$result" != success ] && [ "$result" != skipped ]; then exit 1; fi
           done
 
   deliver-test:

@@ -28,7 +28,8 @@ production worker is a local rehearsal; it does not satisfy this launch review.
 - [ ] Managed or independently backed-up MySQL uses encryption and least-privilege credentials.
 - [ ] Media uses durable object storage or storage with documented backup and restore behavior.
 - [ ] Migration forward and rollback behavior was exercised against production-like data.
-- [ ] Database and media restore drills met the approved recovery objectives.
+- [ ] Browser-local storage limits and source-media backup expectations are documented.
+- [ ] Any future durable project storage has approved restore objectives and tested recovery.
 - RPO/RTO, evidence, and owner:
 
 ## Secrets and supply chain
