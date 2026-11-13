@@ -1,140 +1,74 @@
 # Operations
 
-## Service endpoints
+## Health and logs
 
-| Check         | Compose/local cluster URL              | Healthy result       |
-| ------------- | -------------------------------------- | -------------------- |
-| Web           | `http://localhost:8080/health/web`     | `200 ok`             |
-| API liveness  | `http://localhost:8081/health/live`    | `{"status":"ok"}`    |
-| API readiness | `http://localhost:8081/health/ready`   | `{"status":"ready"}` |
-| Catalog path  | `http://localhost:8080/api/v1/catalog` | JSON song list       |
-| Argo CD       | `https://localhost:8082`               | login page           |
-
-The readiness endpoint checks MySQL with a two-second timeout. A live but
-unready API usually indicates database connectivity or migration trouble.
-
-## Logs and status
-
-### Compose
+The frontend is the only application service. Its health endpoint is
+`/health/web`; Compose/test uses <http://localhost:8080/health/web> and the
+production rehearsal uses <http://localhost:8083/health/web>.
 
 ```bash
 docker compose ps
-docker compose logs --tail=200 db migrate api web
-curl -i http://localhost:8081/health/ready
+docker compose logs --tail=200 web
+kubectl get application bedlam-like-music-test -n argocd-test
+kubectl get deployment,pod,svc -n bedlam-like-music-test
+kubectl rollout status deployment/web -n bedlam-like-music-test
+kubectl logs deployment/web -n bedlam-like-music-test --tail=200
 ```
 
-API logs are structured JSON. Use the response `X-Request-ID` to correlate a
-client-visible failure with its server log entry.
+Repeat with the production namespaces when diagnosing that environment.
+There is no application API readiness check or migration job.
 
-### Kubernetes
+## Browser data
+
+Samples/albums/mixer settings are in IndexedDB; theme and patches use
+localStorage. Each browser origin is separate. They are not on Kubernetes
+volumes and do not synchronize between environments. Preserve original media
+and save takes before navigating away. Clearing site data can erase the library.
+A complete project backup/export workflow is not implemented.
+
+## Backend retirement and retained data
+
+The source no longer starts the old player API, database, or migration jobs.
+No live resources or data are deleted by editing this repository.
+
+When the reviewed revision is delivered, Argo prunes obsolete workloads and
+configuration. Existing StatefulSet claims normally remain when its workload
+is removed; verify retention policies and owner references before the first
+retirement sync, especially if live settings were customized.
+
+The existing `media` PVC remains explicitly declared in the test/production
+overlays with `Prune=false,Delete=false`. This one legacy safeguard prevents an
+automatic GitOps prune from discarding old media. It is not mounted by the app.
+On a fresh installation it may remain Pending because no workload consumes it.
+Removing this safeguard or deleting any retained claims requires a separate data
+review and verified backup. Do not delete namespaces or reset the cluster to clean up.
+
+Old Compose containers, named volumes, local credentials, and `assets/` or
+`media-backup/` directories are untouched. Do not use `down --volumes`,
+`--remove-orphans`, or volume pruning as part of this source migration.
+Retired credentials remain ignored locally and should be handled separately.
+
+## Rollback and delivery
+
+Prefer reverting a bad source change and delivering the reviewed revision.
+Argo owns the desired state; manual image patches will be reversed by self-heal.
 
 ```bash
-kubectl get application bedlam-like-music-test -n argocd-test
-kubectl get pods,jobs,pvc,svc -n bedlam-like-music-test
-kubectl rollout status deployment/api -n bedlam-like-music-test
-kubectl rollout status deployment/web -n bedlam-like-music-test
-kubectl logs deployment/api -n bedlam-like-music-test --tail=200
-kubectl logs statefulset/mysql -n bedlam-like-music-test --tail=200
+kubectl rollout history deployment/web -n bedlam-like-music-test
 kubectl get events -n bedlam-like-music-test --sort-by=.lastTimestamp
 ```
 
-### Routine GitOps check
+Rolling back across backend retirement can restart old services and reconnect
+retained data. Review those resources before reverting to a legacy revision.
 
-Use this sequence after a merge or when the UI is unavailable:
+## Troubleshooting
 
-```bash
-git ls-remote origin refs/heads/development refs/heads/deploy/test
-kubectl get application bedlam-like-music-test -n argocd-test \
-  -o custom-columns=SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision
-kubectl get deployment,statefulset,pod,job -n bedlam-like-music-test
-kubectl get svc web-local -n bedlam-like-music-test
-```
+- ImagePullBackOff: verify the frontend SHA tag and GHCR pull credentials.
+- Missing recordings/previews: inspect microphone permission and frontend CSP.
+- Empty library: check the browser, hostname, and port used to save it.
+- Argo ComparisonError: verify the GitOps branch exists and its overlay renders.
+- Argo UI unavailable: inspect argocd-server and argocd-local in its namespace.
+- Removed API/media paths return 404 by design.
 
-The `deploy/test` revision and test Argo CD's reported revision should converge
-after **Build and promote** completes. A healthy cluster can legitimately lag
-`development` while a newer workflow or reconciliation is still running.
-
-Avoid editing Argo-managed workloads with `kubectl edit`, `set image`, or
-long-lived patches. Self-heal will reverse drift; durable changes belong in Git.
-
-## Data that must survive
-
-- MySQL: accounts, sessions, playlists, likes, mixes, feedback, and history.
-- Media: audio and artwork on the bind-mounted directory or `media` PVC.
-- Git: desired deployment configuration, but never database credentials or
-  licensed media.
-
-## Compose backup and restore
-
-Use an explicit filename outside the repository or under the ignored
-`media-backup/` directory. Avoid printing passwords in logs or committing them.
-
-```bash
-mkdir -p media-backup
-docker compose exec -T db sh -c \
-  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers "$MYSQL_DATABASE"' \
-  > media-backup/mysql.sql
-```
-
-Restore only into the intended database after validating the backup:
-
-```bash
-docker compose exec -T db sh -c \
-  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot "$MYSQL_DATABASE"' \
-  < media-backup/mysql.sql
-```
-
-Back up the directory selected by `MEDIA_PATH` separately. A copy on the same
-disk does not protect against disk failure.
-
-## Kubernetes backup and restore
-
-For a small local cluster, create a MySQL dump and copy the media PVC through
-the existing import pod pattern. Stop writes or use a consistent dump. Before
-any cluster reset, verify that both database and media backups exist outside
-Docker Desktop's virtual disk.
-
-Production use should replace manual commands with scheduled, encrypted,
-retention-managed backups and automated restore tests.
-
-## Rollback
-
-The delivery workflow writes immutable commit-SHA image tags to `deploy/test`.
-Prefer reverting the bad change on `development`; once its checks pass, promotion
-produces a new desired state and Argo CD reconciles it.
-
-```bash
-argocd app history bedlam-like-music-test
-kubectl rollout history deployment/api -n bedlam-like-music-test
-kubectl rollout history deployment/web -n bedlam-like-music-test
-```
-
-Avoid long-lived manual cluster edits because Argo CD self-heal will revert
-them. A manual rollback must be followed by a Git change that makes the desired
-state explicit.
-
-## Common failures
-
-- `ImagePullBackOff`: verify GHCR visibility or pull credentials and confirm
-  the promoted image tag exists.
-- API unready: inspect MySQL readiness, `app-secrets`, `DATABASE_DSN`, and the
-  migration hook logs.
-- Argo `ComparisonError`: verify `deploy/test` exists and the configured path
-  renders with Kustomize.
-- Missing media: verify PVC/bind-mount contents and exact catalog filenames.
-- Login or mutation returns 403: verify `APP_ORIGIN`, HTTPS termination,
-  `COOKIE_SECURE`, and the CSRF header.
-- App loads but API returns 502: verify API pods/containers and nginx's `api`
-  service resolution.
-- Argo CD UI is unavailable: inspect `argocd-server` and `argocd-local` in the
-  `argocd-test` namespace; the persistent endpoint is a LoadBalancer, not a port
-  forward.
-
-## Before public exposure
-
-Do not expose the Docker Desktop test endpoints to the internet. Complete the
-[production readiness review](production-readiness-template.md) and bootstrap a
-separate remote production cluster first.
-
-For the current three-node topology and production promotion rules, see
-[deployment environments](deployment-environments.md) and [CI/CD](github-actions.md).
+See [Argo CD](argo-cd.md), [observability](observability.md), and the
+[production readiness template](production-readiness-template.md).

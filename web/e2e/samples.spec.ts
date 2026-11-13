@@ -27,6 +27,203 @@ function halfToneWav() {
 	return data;
 }
 
+test("populated studio fits narrow screens and editor restores focus", async ({
+	page,
+}) => {
+	await page.goto("/");
+	await page
+		.locator("input[multiple]")
+		.setInputFiles({
+			name: "layout.wav",
+			mimeType: "audio/wav",
+			buffer: silentWav(),
+		});
+	const edit = page.getByRole("button", { name: "Edit layout.wav" });
+	await edit.click();
+	await expect(page.locator(".sample-editor")).toBeFocused();
+	expect(
+		await page
+			.locator(".sample-editor")
+			.evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft)),
+	).toBeGreaterThanOrEqual(20);
+	await page.getByRole("button", { name: "Close editor" }).click();
+	await expect(edit).toBeFocused();
+	for (const width of [320, 390, 768, 900, 1440]) {
+		await page.setViewportSize({ width, height: 900 });
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= innerWidth,
+			),
+		).toBe(true);
+	}
+	await page.getByRole("link", { name: "Synthesizer" }).click();
+	for (const width of [320, 390, 768, 900, 1440]) {
+		await page.setViewportSize({ width, height: 900 });
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= innerWidth,
+			),
+		).toBe(true);
+		const keys = page.locator(".synth-key");
+		expect(
+			await keys.first().evaluate((el) => el.getBoundingClientRect().width),
+		).toBeGreaterThanOrEqual(30);
+		expect(
+			await keys.evaluateAll((nodes) =>
+				nodes.every((el) => el.scrollWidth <= el.clientWidth),
+			),
+		).toBe(true);
+	}
+	await page.getByLabel("Note to sample").focus();
+	await page.keyboard.press("Tab");
+	await expect(page.getByLabel("Note length (seconds)")).toBeFocused();
+	await page.keyboard.press("Tab");
+	await expect(
+		page.getByRole("button", { name: "Add to sample editor" }),
+	).toBeFocused();
+	await page.keyboard.press("Tab");
+	await expect(
+		page.getByRole("button", { name: "C 4, keyboard A", exact: true }),
+	).toBeFocused();
+});
+
+test("validate batches, preserve separate sounds, and reset replacement edits", async ({
+	page,
+}) => {
+	await page.goto("/");
+	await page.locator("input[multiple]").setInputFiles([
+		{ name: "good.wav", mimeType: "audio/wav", buffer: halfToneWav() },
+		{
+			name: "broken.wav",
+			mimeType: "audio/wav",
+			buffer: Buffer.from("invalid"),
+		},
+	]);
+	await expect(page.locator(".sample-status").last()).toContainText(
+		"broken.wav",
+	);
+	await expect(page.locator(".sample-track")).toHaveCount(1);
+	await page
+		.locator("input[multiple]")
+		.evaluate((input: HTMLInputElement, bytes) => {
+			const data = new DataTransfer();
+			data.items.add(new File([new Uint8Array(bytes)], "untyped.wav"));
+			input.files = data.files;
+			input.dispatchEvent(new Event("change", { bubbles: true }));
+		}, Array.from(silentWav()));
+	await expect(page.locator(".sample-track")).toHaveCount(2);
+	await page.getByRole("button", { name: "Edit good.wav" }).click();
+	await expect(page.getByRole("slider", { name: "Trim start" })).toBeVisible();
+	await page.getByRole("slider", { name: "Speed", exact: true }).fill("0.5");
+	await page.getByRole("slider", { name: "Level", exact: true }).fill("0.4");
+	const multiple = await page.evaluateHandle((bytes) => {
+		const data = new DataTransfer();
+		for (const name of ["one.wav", "two.wav"])
+			data.items.add(new File([new Uint8Array(bytes)], name));
+		return data;
+	}, Array.from(silentWav()));
+	await page
+		.locator(".sample-editor")
+		.dispatchEvent("drop", { dataTransfer: multiple });
+	await expect(page.locator(".sample-editor [role=status]")).toContainText(
+		"one sound at a time",
+	);
+	await expect(page.getByLabel("Sample name")).toHaveValue("good.wav");
+	await page.locator(".editor-open input").setInputFiles({
+		name: "good.wav",
+		mimeType: "audio/wav",
+		buffer: silentWav(),
+	});
+	await expect(
+		page.getByRole("slider", { name: "Speed", exact: true }),
+	).toHaveValue("1");
+	await expect(
+		page.getByRole("slider", { name: "Level", exact: true }),
+	).toHaveValue("1");
+	await expect(page.locator(".sample-track")).toHaveCount(2);
+});
+
+test("mixer changes survive slow storage and a legacy invalid sample", async ({
+	page,
+}) => {
+	await page.addInitScript(() => {
+		const open = IDBFactory.prototype.open;
+		IDBFactory.prototype.open = function (
+			...args: Parameters<IDBFactory["open"]>
+		) {
+			const request = open.apply(this, args);
+			Object.defineProperty(request, "onsuccess", {
+				set(handler) {
+					request.addEventListener("success", (event) =>
+						setTimeout(() => handler.call(request, event), 100),
+					);
+				},
+			});
+			return request;
+		};
+	});
+	await page.goto("/");
+	await page.locator("input[multiple]").setInputFiles({
+		name: "mix.wav",
+		mimeType: "audio/wav",
+		buffer: halfToneWav(),
+	});
+	const volume = page.getByRole("slider", { name: "Volume for mix.wav" });
+	const pan = page.getByRole("slider", { name: "Pan for mix.wav" });
+	await volume.fill("0.3");
+	await pan.fill("0.8");
+	// Wait for the actual persisted values, not optimistic UI updates.
+	await expect
+		.poll(() =>
+			page.evaluate(async () => {
+				const db = await new Promise<IDBDatabase>((resolve) => {
+					const request = indexedDB.open("bedlam-sample-studio", 1);
+					request.onsuccess = () => resolve(request.result);
+				});
+				return new Promise((resolve) => {
+					const tx = db.transaction("samples");
+					const request = tx.objectStore("samples").getAll();
+					tx.oncomplete = () => {
+						db.close();
+						resolve(
+							request.result.map((sample) => [sample.volume, sample.pan]),
+						);
+					};
+				});
+			}),
+		)
+		.toEqual([[0.3, 0.8]]);
+	await page.evaluate(async () => {
+		const db = await new Promise<IDBDatabase>((resolve) => {
+			const request = indexedDB.open("bedlam-sample-studio", 1);
+			request.onsuccess = () => resolve(request.result);
+		});
+		await new Promise<void>((resolve) => {
+			const tx = db.transaction("samples", "readwrite");
+			tx.objectStore("samples").put({
+				id: "legacy-bad",
+				name: "legacy.wav",
+				album: "My first album",
+				audio: new Blob(["bad"]),
+				volume: 1,
+				pan: 0,
+				muted: false,
+			});
+			tx.oncomplete = () => {
+				db.close();
+				resolve();
+			};
+		});
+	});
+	await page.reload();
+	await expect(volume).toHaveValue("0.3");
+	await expect(pan).toHaveValue("0.8");
+	await page.getByRole("button", { name: "▶ Play mix", exact: true }).click();
+	await expect(page.locator(".sample-status").last()).toHaveText(
+		"Playing supported samples. Could not decode: legacy.wav.",
+	);
+});
+
 test("import samples, mix, and restore an album", async ({ page }) => {
 	await page.goto("/");
 	await page.getByLabel("New album name").fill("Game sounds");

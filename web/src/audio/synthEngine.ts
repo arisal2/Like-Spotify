@@ -1,5 +1,10 @@
 import { synthPatchSchema, type SynthPatch } from "./synthPatch";
 import { encodeWav } from "./wav";
+import {
+	maxPhraseNotes,
+	maxPhraseSeconds,
+	type SynthNote,
+} from "./synthPhrase";
 
 type Voice = {
 	sources: OscillatorNode[];
@@ -24,6 +29,7 @@ function createVoice(
 	note: number,
 	patch: SynthPatch,
 	now: number,
+	output: AudioNode = context.destination,
 ): Voice {
 	const first = context.createOscillator();
 	const second = context.createOscillator();
@@ -76,11 +82,7 @@ function createVoice(
 	first.connect(firstLevel).connect(filter);
 	second.connect(secondLevel).connect(filter);
 	lfo.connect(lfoLevel).connect(filter.frequency);
-	filter
-		.connect(shaper)
-		.connect(gain)
-		.connect(limiter)
-		.connect(context.destination);
+	filter.connect(shaper).connect(gain).connect(limiter).connect(output);
 	const nodes: AudioNode[] = [
 		first,
 		second,
@@ -127,7 +129,17 @@ export async function renderSynthSample(
 		Math.ceil(total * sampleRate),
 		sampleRate,
 	);
-	const voice = createVoice(context, note, patch, 0);
+	const voice = createVoice(context, note, patch, 0, masterOutput(context));
+	releaseOfflineVoice(voice, patch, 0, heldSeconds);
+	return encodeWav(await context.startRendering());
+}
+
+function releaseOfflineVoice(
+	voice: Voice,
+	patch: SynthPatch,
+	start: number,
+	heldSeconds: number,
+) {
 	let level: number;
 	if (heldSeconds < patch.attack)
 		level = (patch.volume * heldSeconds) / patch.attack;
@@ -136,48 +148,100 @@ export async function renderSynthSample(
 			patch.volume *
 			(1 - ((1 - patch.sustain) * (heldSeconds - patch.attack)) / patch.decay);
 	else level = patch.volume * patch.sustain;
-	voice.gain.gain.cancelScheduledValues(heldSeconds);
-	voice.gain.gain.linearRampToValueAtTime(level, heldSeconds);
-	voice.gain.gain.linearRampToValueAtTime(0, heldSeconds + patch.release);
-	for (const source of voice.sources)
-		source.stop(heldSeconds + patch.release + 0.01);
+	const end = start + heldSeconds;
+	voice.gain.gain.cancelScheduledValues(end);
+	voice.gain.gain.linearRampToValueAtTime(level, end);
+	voice.gain.gain.linearRampToValueAtTime(0, end + patch.release);
+	for (const source of voice.sources) source.stop(end + patch.release + 0.01);
+}
+
+function masterOutput(context: BaseAudioContext) {
+	const headroom = context.createGain();
+	headroom.gain.value = 0.25;
+	const limiter = context.createDynamicsCompressor();
+	limiter.threshold.value = -6;
+	limiter.ratio.value = 20;
+	headroom.connect(limiter).connect(context.destination);
+	return headroom;
+}
+
+export async function renderSynthPhrase(notes: SynthNote[]): Promise<Blob> {
+	if (!notes.length || notes.length > maxPhraseNotes)
+		throw new Error("Record a phrase before adding it to the editor.");
+	const validated = notes.map((event) => {
+		if (
+			!Number.isInteger(event.note) ||
+			event.note < 48 ||
+			event.note > 84 ||
+			!Number.isFinite(event.start) ||
+			event.start < 0 ||
+			!Number.isFinite(event.duration) ||
+			event.duration <= 0 ||
+			event.start + event.duration > maxPhraseSeconds + 0.001
+		)
+			throw new Error("Invalid phrase timing or note.");
+		return { ...event, patch: synthPatchSchema.parse(event.patch) };
+	});
+	const total =
+		Math.max(
+			...validated.map(
+				(event) => event.start + event.duration + event.patch.release,
+			),
+		) + 0.05;
+	const context = new OfflineAudioContext(1, Math.ceil(total * 44100), 44100);
+	const output = masterOutput(context);
+	for (const event of validated) {
+		const voice = createVoice(
+			context,
+			event.note,
+			event.patch,
+			event.start,
+			output,
+		);
+		releaseOfflineVoice(voice, event.patch, event.start, event.duration);
+	}
 	return encodeWav(await context.startRendering());
 }
 
-/** One voice at a time; audio nodes never enter React state. */
+/** Polyphonic notes share one context; releasing a key affects only its voice. */
 export class SynthEngine {
 	private context?: AudioContext;
-	private voice?: Voice;
-	private generation = 0;
-	private pendingNote?: number;
+	private output?: GainNode;
+	private voices = new Map<number, Voice>();
+	private pending = new Map<number, symbol>();
 
 	async noteOn(note: number, input: SynthPatch) {
 		if (!Number.isInteger(note) || note < 48 || note > 84) return;
 		const patch = synthPatchSchema.parse(input);
-		const generation = ++this.generation;
-		this.pendingNote = note;
-		this.stopVoice();
+		if (this.voices.has(note) || this.pending.has(note)) return;
+		if (this.voices.size + this.pending.size >= 12) return;
+		const token = Symbol();
+		this.pending.set(note, token);
 		this.context ??= new AudioContext();
 		const context = this.context;
-		if (context.state === "suspended") await context.resume();
-		if (generation !== this.generation || context.state === "closed") return;
-		this.pendingNote = undefined;
-		this.voice = createVoice(context, note, patch, context.currentTime);
+		try {
+			if (context.state === "suspended") await context.resume();
+			if (this.pending.get(note) !== token || context.state === "closed")
+				return;
+			this.output ??= masterOutput(context);
+			this.voices.set(
+				note,
+				createVoice(context, note, patch, context.currentTime, this.output),
+			);
+		} finally {
+			if (this.pending.get(note) === token) this.pending.delete(note);
+		}
 	}
 
 	noteOff(note: number, release: number) {
-		if (this.pendingNote === note) {
-			++this.generation;
-			this.pendingNote = undefined;
-		}
-		if (this.voice?.note !== note) return;
-		this.stopVoice(release);
+		this.pending.delete(note);
+		this.stopVoice(note, release);
 	}
 
-	private stopVoice(release = 0.03) {
-		const voice = this.voice;
+	private stopVoice(note: number, release = 0.03) {
+		const voice = this.voices.get(note);
 		const context = this.context;
-		this.voice = undefined;
+		this.voices.delete(note);
 		if (!voice || !context || context.state === "closed") return;
 		const now = context.currentTime;
 		const duration = Math.max(0.03, Math.min(2, release));
@@ -187,15 +251,16 @@ export class SynthEngine {
 	}
 
 	dispose() {
-		++this.generation;
-		this.pendingNote = undefined;
-		const voice = this.voice;
-		this.stopVoice();
+		this.pending.clear();
+		const voices = [...this.voices.values()];
+		for (const note of this.voices.keys()) this.stopVoice(note);
 		const context = this.context;
 		this.context = undefined;
+		this.output = undefined;
 		if (context && context.state !== "closed")
 			void context.close().then(() => {
-				if (voice) for (const node of voice.nodes) node.disconnect();
+				for (const voice of voices)
+					for (const node of voice.nodes) node.disconnect();
 			});
 	}
 }

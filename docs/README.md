@@ -3,13 +3,12 @@
 ## Use the studio
 
 - [Studio guide](studio.md): synthesis, samples, sound matching, and theory.
-- [Quick start](development.md#run-the-complete-stack): run the app with Docker Compose.
+- [Quick start](development.md#run-the-studio): run the app with Docker Compose.
 
 ## Build and understand
 
 - [Development and testing](development.md): local tools, services, and checks.
-- [Architecture](architecture.md): audio, storage, API, and deployment boundaries.
-- [API reference](api.md): existing Go endpoints.
+- [Architecture](architecture.md): browser audio, local storage, and frontend deployment.
 - [Project notes](project/README.md): roles and decisions; older task entries may describe previous product directions.
 
 ## Deploy and operate

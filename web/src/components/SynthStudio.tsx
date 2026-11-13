@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { renderSynthSample, SynthEngine } from "../audio/synthEngine";
+import { useEffect, useState } from "react";
+import { renderSynthSample, renderSynthPhrase } from "../audio/synthEngine";
+import {
+	synthKeys as keys,
+	useSynthPerformance,
+} from "../hooks/useSynthPerformance";
 import {
 	defaultSynthPatch,
 	readSynthPatch,
@@ -8,7 +12,6 @@ import {
 	type SynthPatch,
 } from "../audio/synthPatch";
 
-const keys = ["a", "w", "s", "e", "d", "f", "t", "g", "y", "h", "u", "j"];
 const names = [
 	"C",
 	"C sharp",
@@ -30,15 +33,20 @@ export function SynthStudio({
 	onSendToEditor?: (audio: Blob, name: string) => void;
 }) {
 	const [patch, setPatch] = useState(() => readSynthPatch(window.localStorage));
-	const [status, setStatus] = useState("Play a key to start making sound.");
-	const [active, setActive] = useState<number | null>(null);
 	const [sampleNote, setSampleNote] = useState(60);
+	const {
+		active,
+		recording,
+		take,
+		status,
+		setStatus,
+		startNote,
+		endNote,
+		startRecording,
+		stopRecording,
+	} = useSynthPerformance(patch, setSampleNote);
 	const [sampleDuration, setSampleDuration] = useState(1);
 	const [rendering, setRendering] = useState(false);
-	const engine = useRef<SynthEngine | null>(null);
-	const patchRef = useRef(patch);
-	patchRef.current = patch;
-	const currentEngine = () => (engine.current ??= new SynthEngine());
 
 	useEffect(() => {
 		try {
@@ -48,51 +56,6 @@ export function SynthStudio({
 			setStatus("Could not save this patch in your browser.");
 		}
 	}, [patch]);
-
-	useEffect(() => {
-		const down = (event: KeyboardEvent) => {
-			if (
-				event.repeat ||
-				event.ctrlKey ||
-				event.metaKey ||
-				event.altKey ||
-				event.target instanceof HTMLInputElement ||
-				event.target instanceof HTMLSelectElement ||
-				event.target instanceof HTMLTextAreaElement ||
-				(event.target instanceof HTMLElement && event.target.isContentEditable)
-			)
-				return;
-			const index = keys.indexOf(event.key.toLowerCase());
-			if (index < 0) return;
-			event.preventDefault();
-			setActive(index);
-			setSampleNote(60 + index);
-			void currentEngine()
-				.noteOn(60 + index, patchRef.current)
-				.catch(() => setStatus("Audio could not start. Try another key."));
-		};
-		const up = (event: KeyboardEvent) => {
-			const index = keys.indexOf(event.key.toLowerCase());
-			if (index < 0) return;
-			engine.current?.noteOff(60 + index, patchRef.current.release);
-			setActive((value) => (value === index ? null : value));
-		};
-		const stop = () => {
-			engine.current?.dispose();
-			engine.current = null;
-			setActive(null);
-		};
-		window.addEventListener("keydown", down);
-		window.addEventListener("keyup", up);
-		window.addEventListener("blur", stop);
-		return () => {
-			window.removeEventListener("keydown", down);
-			window.removeEventListener("keyup", up);
-			window.removeEventListener("blur", stop);
-			engine.current?.dispose();
-			engine.current = null;
-		};
-	}, []);
 
 	const update = <K extends keyof SynthPatch>(key: K, value: SynthPatch[K]) =>
 		setPatch((old) => ({ ...old, [key]: value }));
@@ -108,6 +71,159 @@ export function SynthStudio({
 					</p>
 				</div>
 			</header>
+			<div className="sound-output synth-keyboard-panel">
+				<span className="eyebrow">KEYBOARD · C4 TO B4</span>
+				<h2>Play a note</h2>
+				<p>
+					Use your mouse, touch, or the letters shown below. Lower the cutoff
+					for a darker sound.
+				</p>
+				{onSendToEditor && (
+					<div className="synth-sample-actions">
+						<label>
+							Note to sample
+							<select
+								aria-label="Note to sample"
+								value={sampleNote}
+								onChange={(event) => setSampleNote(Number(event.target.value))}
+							>
+								{names.map((name, index) => (
+									<option key={name} value={60 + index}>
+										{name} 4
+									</option>
+								))}
+							</select>
+						</label>
+						<label>
+							Note length (seconds)
+							<input
+								type="number"
+								min="0.1"
+								max="5"
+								step="0.1"
+								value={sampleDuration}
+								onChange={(event) =>
+									setSampleDuration(event.currentTarget.valueAsNumber)
+								}
+							/>
+						</label>
+						<button
+							disabled={rendering || recording}
+							onClick={() => {
+								setRendering(true);
+								void renderSynthSample(sampleNote, patch, sampleDuration)
+									.then((audio) =>
+										onSendToEditor(audio, `Synth ${names[sampleNote - 60]} 4`),
+									)
+									.catch((error) =>
+										setStatus(
+											error instanceof Error
+												? error.message
+												: "Could not render the synth sample.",
+										),
+									)
+									.finally(() => setRendering(false));
+							}}
+						>
+							{rendering ? "Creating sample…" : "Add to sample editor"}
+						</button>
+					</div>
+				)}
+				<div className="synth-keys" aria-label="Piano keyboard">
+					{keys.map((key, index) => (
+						<button
+							key={key}
+							className={`synth-key ${[1, 3, 6, 8, 10].includes(index) ? "sharp" : ""} ${active.includes(index) ? "pressed" : ""}`}
+							aria-label={`${names[index]} 4, keyboard ${key.toUpperCase()}`}
+							aria-pressed={active.includes(index)}
+							onPointerDown={(event) => {
+								event.currentTarget.setPointerCapture(event.pointerId);
+								setSampleNote(60 + index);
+								startNote(index, `pointer:${event.pointerId}`);
+							}}
+							onPointerUp={(event) =>
+								endNote(index, `pointer:${event.pointerId}`)
+							}
+							onPointerCancel={(event) =>
+								endNote(index, `pointer:${event.pointerId}`)
+							}
+							onLostPointerCapture={(event) =>
+								endNote(index, `pointer:${event.pointerId}`)
+							}
+							onKeyDown={(event) => {
+								if (
+									(event.key === " " || event.key === "Enter") &&
+									!event.repeat
+								) {
+									event.preventDefault();
+									setSampleNote(60 + index);
+									startNote(index, `button:${event.key}`);
+								}
+							}}
+							onKeyUp={(event) => {
+								if (event.key === " " || event.key === "Enter") {
+									event.preventDefault();
+									endNote(index, `button:${event.key}`);
+								}
+							}}
+							onBlur={() => {
+								endNote(index, "button: ");
+								endNote(index, "button:Enter");
+							}}
+						>
+							<span>{names[index]}</span>
+							<small>{key.toUpperCase()}</small>
+						</button>
+					))}
+				</div>
+				{onSendToEditor && (
+					<div className="synth-phrase">
+						<h3>Record a phrase</h3>
+						<p>
+							Capture the notes and chords you play, up to 30 seconds. Add the
+							take to the editor, then save it as a separate sample. The note
+							selector above exports just one note.
+						</p>
+						<div className="synth-sample-actions">
+							<button
+								disabled={recording || rendering}
+								onClick={startRecording}
+							>
+								Record phrase
+							</button>
+							<button disabled={!recording} onClick={stopRecording}>
+								Stop phrase
+							</button>
+							<button
+								disabled={recording || rendering || !take.length}
+								onClick={() => {
+									setRendering(true);
+									void renderSynthPhrase(take)
+										.then((audio) =>
+											onSendToEditor(
+												audio,
+												`Synth phrase ${new Date().toLocaleTimeString()}`,
+											),
+										)
+										.catch((error) =>
+											setStatus(
+												error instanceof Error
+													? error.message
+													: "Could not render the phrase.",
+											),
+										)
+										.finally(() => setRendering(false));
+								}}
+							>
+								Add phrase to editor
+							</button>
+						</div>
+					</div>
+				)}
+				<p className="sound-status" role="status">
+					{status}
+				</p>
+			</div>
 			<div className="synth-layout">
 				<div className="sound-controls">
 					<div className="sound-panel-heading">
@@ -217,121 +333,6 @@ export function SynthStudio({
 								}
 							/>
 						</label>
-					))}
-					<p className="sound-status" role="status">
-						{status}
-					</p>
-				</div>
-			</div>
-			<div className="sound-output synth-keyboard-panel">
-				<span className="eyebrow">KEYBOARD · C4 TO B4</span>
-				<h2>Play a note</h2>
-				<p>
-					Use your mouse, touch, or the letters shown below. Lower the cutoff
-					for a darker sound.
-				</p>
-				{onSendToEditor && (
-					<div className="synth-sample-actions">
-						<label>
-							Note to sample
-							<select
-								aria-label="Note to sample"
-								value={sampleNote}
-								onChange={(event) => setSampleNote(Number(event.target.value))}
-							>
-								{names.map((name, index) => (
-									<option key={name} value={60 + index}>
-										{name} 4
-									</option>
-								))}
-							</select>
-						</label>
-						<label>
-							Note length (seconds)
-							<input
-								type="number"
-								min="0.1"
-								max="5"
-								step="0.1"
-								value={sampleDuration}
-								onChange={(event) =>
-									setSampleDuration(event.currentTarget.valueAsNumber)
-								}
-							/>
-						</label>
-						<button
-							disabled={rendering}
-							onClick={() => {
-								setRendering(true);
-								void renderSynthSample(sampleNote, patch, sampleDuration)
-									.then((audio) =>
-										onSendToEditor(audio, `Synth ${names[sampleNote - 60]} 4`),
-									)
-									.catch((error) =>
-										setStatus(
-											error instanceof Error
-												? error.message
-												: "Could not render the synth sample.",
-										),
-									)
-									.finally(() => setRendering(false));
-							}}
-						>
-							{rendering ? "Creating sample…" : "Add to sample editor"}
-						</button>
-					</div>
-				)}
-				<div className="synth-keys" aria-label="Piano keyboard">
-					{keys.map((key, index) => (
-						<button
-							key={key}
-							className={`synth-key ${[1, 3, 6, 8, 10].includes(index) ? "sharp" : ""} ${active === index ? "pressed" : ""}`}
-							aria-label={`${names[index]} 4, keyboard ${key.toUpperCase()}`}
-							aria-pressed={active === index}
-							onPointerDown={(event) => {
-								event.currentTarget.setPointerCapture(event.pointerId);
-								setActive(index);
-								setSampleNote(60 + index);
-								void currentEngine()
-									.noteOn(60 + index, patch)
-									.catch(() =>
-										setStatus("Audio could not start. Try another key."),
-									);
-							}}
-							onPointerUp={() => {
-								engine.current?.noteOff(60 + index, patch.release);
-								setActive(null);
-							}}
-							onPointerCancel={() => {
-								engine.current?.noteOff(60 + index, patch.release);
-								setActive(null);
-							}}
-							onKeyDown={(event) => {
-								if (
-									(event.key === " " || event.key === "Enter") &&
-									!event.repeat
-								) {
-									event.preventDefault();
-									setActive(index);
-									setSampleNote(60 + index);
-									void currentEngine()
-										.noteOn(60 + index, patch)
-										.catch(() =>
-											setStatus("Audio could not start. Try another key."),
-										);
-								}
-							}}
-							onKeyUp={(event) => {
-								if (event.key === " " || event.key === "Enter") {
-									event.preventDefault();
-									engine.current?.noteOff(60 + index, patch.release);
-									setActive(null);
-								}
-							}}
-						>
-							<span>{names[index]}</span>
-							<small>{key.toUpperCase()}</small>
-						</button>
 					))}
 				</div>
 			</div>

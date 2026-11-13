@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { SampleMixer } from "../audio/sampleMixer";
 import {
 	deleteSample,
+	updateSampleMix,
+	type MixChange,
 	loadSamples,
 	saveSample,
 	type Sample,
 } from "../audio/sampleStore";
 import { SynthStudio } from "./SynthStudio";
+import { TheoryStudio } from "./TheoryStudio";
 import { SoundMatcher } from "./SoundMatcher";
 import { SampleEditor } from "./SampleEditor";
 import "./sampleStudio.css";
+import { validateAudioFile } from "../audio/audioFile";
 
-const maxBytes = 20 * 1024 * 1024;
 export function SampleStudio() {
 	const [samples, setSamples] = useState<Sample[]>([]);
 	const [album, setAlbum] = useState("My first album");
@@ -29,9 +32,20 @@ export function SampleStudio() {
 		}
 	});
 	const navigate = useNavigate();
-	const view = useLocation().pathname === "/studio/synth" ? "synth" : "samples";
+	const path = useLocation().pathname;
+	const view =
+		path === "/studio/synth"
+			? "synth"
+			: path === "/studio/theory"
+				? "theory"
+				: "samples";
 	const [status, setStatus] = useState("Loading your library…");
 	const mixer = useRef<SampleMixer | null>(null);
+	const mixerWrites = useRef<Promise<unknown>>(Promise.resolve());
+	const editorOpener = useRef<HTMLButtonElement | null>(null);
+	useEffect(() => {
+		mixer.current?.stop();
+	}, [path]);
 	useEffect(() => {
 		let mounted = true;
 		void loadSamples()
@@ -63,14 +77,14 @@ export function SampleStudio() {
 	);
 	async function importFiles(files: FileList | null) {
 		if (!files) return;
+		let added = 0;
+		const errors: string[] = [];
 		for (const file of Array.from(files)) {
-			if (
-				!file.type.startsWith("audio/") ||
-				file.size === 0 ||
-				file.size > maxBytes
-			) {
-				setStatus(
-					`Could not add ${file.name}: choose an audio file up to 20 MB.`,
+			try {
+				await validateAudioFile(file);
+			} catch (error) {
+				errors.push(
+					`${file.name}: ${error instanceof Error ? error.message : "Invalid audio."}`,
 				);
 				continue;
 			}
@@ -86,26 +100,32 @@ export function SampleStudio() {
 			try {
 				await saveSample(sample);
 				setSamples((old) => [...old, sample]);
-				setStatus(`Added ${file.name} to ${album}.`);
+				added++;
 			} catch {
-				setStatus(`Could not save ${file.name}. Browser storage may be full.`);
+				errors.push(
+					`Could not save ${file.name}. Browser storage may be full.`,
+				);
 			}
 		}
+		setStatus(`Added ${added} sound(s) to ${album}. ${errors.join(" ")}`);
 	}
-	async function update(sample: Sample) {
-		try {
-			await saveSample(sample);
-			setSamples((old) =>
-				old.map((item) => (item.id === sample.id ? sample : item)),
-			);
-		} catch {
-			setStatus("Could not save this mixer change.");
-		}
+	function update(id: string, change: MixChange) {
+		setSamples((old) =>
+			old.map((item) => (item.id === id ? { ...item, ...change } : item)),
+		);
+		mixerWrites.current = mixerWrites.current
+			.then(() => updateSampleMix(id, change))
+			.catch(() => {
+				setStatus(
+					"Could not save this mixer change. Your current settings may not survive reload.",
+				);
+			});
 	}
 	async function remove(sample: Sample) {
 		if (!window.confirm(`Remove ${sample.name} from this browser's library?`))
 			return;
 		try {
+			await mixerWrites.current;
 			await deleteSample(sample.id);
 			setSamples((old) => old.filter((item) => item.id !== sample.id));
 			setStatus(`Removed ${sample.name}.`);
@@ -116,9 +136,14 @@ export function SampleStudio() {
 	async function play(items: Sample[]) {
 		try {
 			mixer.current ??= new SampleMixer();
-			await mixer.current.play(items);
+			const result = await mixer.current.play(items);
+			if (!result) return;
 			setStatus(
-				"Playing samples together. Stop playback before changing the mix.",
+				result.failed.length
+					? `${result.played ? "Playing supported samples." : "No playable samples."} Could not decode: ${result.failed.join(", ")}.`
+					: result.played
+						? "Playing samples together. Stop playback before changing the mix."
+						: "No unmuted samples to play.",
 			);
 		} catch {
 			setStatus(
@@ -134,21 +159,11 @@ export function SampleStudio() {
 				</div>
 				<p>MAKE SOMETHING LOUDER.</p>
 				<nav aria-label="Studio navigation">
-					<button
-						className={view === "samples" ? "selected" : ""}
-						onClick={() => navigate("/")}
-					>
+					<NavLink to="/" end>
 						Sample library
-					</button>
-					<button
-						className={view === "synth" ? "selected" : ""}
-						onClick={() => {
-							mixer.current?.stop();
-							navigate("/studio/synth");
-						}}
-					>
-						Synthesizer
-					</button>
+					</NavLink>
+					<NavLink to="/studio/synth">Synthesizer</NavLink>
+					<NavLink to="/studio/theory">Music theory</NavLink>
 				</nav>
 				<label className="theme-picker">
 					Theme
@@ -176,7 +191,9 @@ export function SampleStudio() {
 				</div>
 			</aside>
 			<main className="sample-main">
-				{view === "synth" ? (
+				{view === "theory" ? (
+					<TheoryStudio />
+				) : view === "synth" ? (
 					<SynthStudio
 						onSendToEditor={(audio, name) => {
 							setEditorInput({ audio, name });
@@ -232,7 +249,10 @@ export function SampleStudio() {
 								onReplace={(file) =>
 									setEditorInput({ audio: file, name: file.name })
 								}
-								onClose={() => setEditorInput(null)}
+								onClose={() => {
+									setEditorInput(null);
+									editorOpener.current?.focus();
+								}}
 								onSave={async (audio, name) => {
 									const sample: Sample = {
 										id: crypto.randomUUID(),
@@ -336,7 +356,8 @@ export function SampleStudio() {
 												<strong>{sample.name}</strong>
 											</div>
 											<button
-												onClick={() => {
+												onClick={(event) => {
+													editorOpener.current = event.currentTarget;
 													mixer.current?.stop();
 													setEditorInput({
 														audio: sample.audio,
@@ -362,8 +383,7 @@ export function SampleStudio() {
 													step="0.05"
 													value={sample.volume}
 													onChange={(event) =>
-														void update({
-															...sample,
+														void update(sample.id, {
 															volume: event.currentTarget.valueAsNumber,
 														})
 													}
@@ -379,8 +399,7 @@ export function SampleStudio() {
 													step="0.1"
 													value={sample.pan}
 													onChange={(event) =>
-														void update({
-															...sample,
+														void update(sample.id, {
 															pan: event.currentTarget.valueAsNumber,
 														})
 													}
@@ -389,8 +408,9 @@ export function SampleStudio() {
 											</label>
 											<button
 												aria-pressed={sample.muted}
+												aria-label={`${sample.muted ? "Unmute" : "Mute"} ${sample.name}`}
 												onClick={() =>
-													void update({ ...sample, muted: !sample.muted })
+													void update(sample.id, { muted: !sample.muted })
 												}
 											>
 												{sample.muted ? "Unmute" : "Mute"}

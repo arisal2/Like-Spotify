@@ -9,8 +9,8 @@ The approved local topology is one Docker Desktop cluster with three nodes.
 | Production rehearsal | `desktop-worker2`       | `bedlam-like-music-production` | `argocd-production` | `master`      | `deploy/production` |
 
 Both workers have a `bedlam.io/environment` label and matching `NoSchedule`
-taint. Every application Deployment, StatefulSet, and migration Job has a
-matching node selector and toleration. The media-import utility targets test.
+taint. Each frontend Deployment has a matching node selector and toleration.
+There is no application database or migration workload.
 Namespaces are created by bootstrap, not by either Argo CD instance.
 
 Each namespace-scoped Argo CD instance has a RoleBinding only in its own
@@ -39,12 +39,11 @@ the test cluster both use port 8080; stop one before starting the other. See
 
 This is a local production-workflow rehearsal, not a highly available hosted
 production service. The control plane, workers, storage, and host share failure
-modes. Each environment has one worker and one database replica. Local-path
-volumes remain on their assigned node. Back up both environments separately.
+modes. Each environment has one worker. Retired legacy volumes remain on their
+assigned node; browser samples instead belong to their browser origin.
 
-The local production overlay uses HTTP at `localhost:8083` and disables secure
-cookies for that loopback workflow. Enable TLS and secure cookies before any
-external deployment. Do not expose this configuration publicly.
+The local production overlay uses HTTP at `localhost:8083`. Use HTTPS for any
+external deployment, including browser microphone support. Do not expose this configuration publicly.
 
 NetworkPolicy manifests remain in place, but do not treat them as enforced
 isolation until the cluster networking implementation has been verified with
