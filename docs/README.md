@@ -3,7 +3,7 @@
 ## Use the studio
 
 - [Studio guide](studio.md): synthesis, samples, sound matching, and theory.
-- [Quick start](../README.md#get-started): run the app with Docker Compose.
+- [Quick start](development.md#run-the-complete-stack): run the app with Docker Compose.
 
 ## Build and understand
 

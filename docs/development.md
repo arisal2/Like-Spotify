@@ -23,9 +23,14 @@ docs/                 architecture, API, operations, and setup guides
 
 ```bash
 cp .env.example .env
+mkdir -p assets/music assets/images/artwork
 # Set unique MYSQL_PASSWORD and MYSQL_ROOT_PASSWORD values.
 docker compose up --build
 ```
+
+Open <http://localhost:8080>. The studio does not require preloaded music files;
+microphone recording asks for browser permission. Stop the stack with
+`docker compose down`.
 
 The web UI is on port 8080, the API is also published directly on 8081 for
 debugging, and MySQL is published on 3307. All published Compose ports bind to

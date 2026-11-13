@@ -21,6 +21,20 @@ Run `bash scripts/bootstrap-cluster.sh` to reproduce the node assignments,
 namespaces, pinned Argo CD installation, and RBAC. See [Argo CD](argo-cd.md)
 for application activation after the workflows have been published.
 
+## Local endpoints
+
+| Service                      | Address                  |
+| ---------------------------- | ------------------------ |
+| Test app                     | <http://localhost:8080>  |
+| Test Argo CD                 | <https://localhost:8082> |
+| Production-rehearsal app     | <http://localhost:8083>  |
+| Production-rehearsal Argo CD | <https://localhost:8084> |
+| Grafana, if installed        | <http://localhost:3000>  |
+
+These addresses require the corresponding services to be running. Compose and
+the test cluster both use port 8080; stop one before starting the other. See
+[observability](observability.md) for Grafana setup.
+
 ## Limits of this topology
 
 This is a local production-workflow rehearsal, not a highly available hosted

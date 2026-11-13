@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { encodeWav } from "../audio/wav";
+import { WaveformTimeline } from "./WaveformTimeline";
 
 export function SampleEditor({
 	input,
 	onSave,
 	onClose,
+	onReplace,
 }: {
 	input: { audio: Blob; name: string };
 	onSave: (audio: Blob, name: string) => Promise<void>;
 	onClose: () => void;
+	onReplace: (file: File) => void;
 }) {
 	const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
 	const [name, setName] = useState(input.name);
@@ -20,6 +23,7 @@ export function SampleEditor({
 	const [message, setMessage] = useState("Loading sample…");
 	const [preview, setPreview] = useState("");
 	const [original, setOriginal] = useState("");
+	const [playhead, setPlayhead] = useState<number | null>(null);
 	const player = useRef<HTMLAudioElement>(null);
 	const editor = useRef<HTMLElement>(null);
 	useEffect(() => {
@@ -32,11 +36,14 @@ export function SampleEditor({
 	}, [input.audio]);
 	useEffect(() => {
 		let active = true;
+		setBuffer(null);
+		setPlayhead(null);
 		const context = new AudioContext();
 		void input.audio
 			.arrayBuffer()
 			.then((data) => context.decodeAudioData(data))
 			.then((audio) => {
+				if (audio.duration <= 0) throw new Error("Empty audio");
 				if (active) {
 					setBuffer(audio);
 					setStart(0);
@@ -62,6 +69,7 @@ export function SampleEditor({
 	);
 	useEffect(() => {
 		setPreview("");
+		setPlayhead(null);
 	}, [start, end, gain, speed]);
 	async function render() {
 		if (
@@ -116,15 +124,67 @@ export function SampleEditor({
 			ref={editor}
 			className="sample-section sample-editor"
 			aria-labelledby="sample-editor-title"
+			onDragOver={(event) => {
+				if (event.dataTransfer.types.includes("Files")) event.preventDefault();
+			}}
+			onDrop={(event) => {
+				if (!event.dataTransfer.types.includes("Files")) return;
+				event.preventDefault();
+				const file = event.dataTransfer.files[0];
+				if (
+					!file ||
+					!file.type.startsWith("audio/") ||
+					file.size === 0 ||
+					file.size > 20 * 1024 * 1024
+				) {
+					setMessage("Drop an audio file up to 20 MB.");
+					return;
+				}
+				onReplace(file);
+			}}
 		>
 			<div className="sample-section-title">
 				<div>
 					<span className="eyebrow">SAMPLE EDITOR</span>
 					<h2 id="sample-editor-title">Cut and shape your sound.</h2>
-					<p>Edits create a new WAV; your original remains untouched.</p>
+					<p>
+						Drag the trim markers or drop another audio file here. Saving
+						creates a new WAV.
+					</p>
 				</div>
-				<button onClick={onClose}>Close editor</button>
+				<div className="editor-header-actions">
+					<label className="editor-open">
+						Open audio
+						<input
+							type="file"
+							accept="audio/*"
+							onChange={(event) => {
+								const file = event.currentTarget.files?.[0];
+								if (
+									file &&
+									file.type.startsWith("audio/") &&
+									file.size > 0 &&
+									file.size <= 20 * 1024 * 1024
+								)
+									onReplace(file);
+								else if (file) setMessage("Choose an audio file up to 20 MB.");
+								event.currentTarget.value = "";
+							}}
+						/>
+					</label>
+					<button onClick={onClose}>Close editor</button>
+				</div>
 			</div>
+			{buffer && (
+				<WaveformTimeline
+					buffer={buffer}
+					start={start}
+					end={end}
+					playhead={playhead}
+					onStart={setStart}
+					onEnd={setEnd}
+				/>
+			)}
 			{original && (
 				<div className="editor-original">
 					<span>Original sample</span>
@@ -132,6 +192,10 @@ export function SampleEditor({
 						controls
 						src={original}
 						aria-label="Original sample playback"
+						onTimeUpdate={(event) =>
+							setPlayhead(event.currentTarget.currentTime)
+						}
+						onEnded={() => setPlayhead(null)}
 					/>
 				</div>
 			)}
@@ -142,28 +206,6 @@ export function SampleEditor({
 						value={name}
 						maxLength={100}
 						onChange={(event) => setName(event.target.value)}
-					/>
-				</label>
-				<label>
-					Start (seconds)
-					<input
-						type="number"
-						min="0"
-						max={buffer?.duration ?? 0}
-						step="0.01"
-						value={start}
-						onChange={(event) => setStart(event.currentTarget.valueAsNumber)}
-					/>
-				</label>
-				<label>
-					End (seconds)
-					<input
-						type="number"
-						min="0"
-						max={buffer?.duration ?? 0}
-						step="0.01"
-						value={end}
-						onChange={(event) => setEnd(event.currentTarget.valueAsNumber)}
 					/>
 				</label>
 				<label>
@@ -191,6 +233,33 @@ export function SampleEditor({
 					/>
 				</label>
 			</div>
+			<details className="editor-precise">
+				<summary>Precise trim</summary>
+				<div className="editor-controls">
+					<label>
+						Start (seconds)
+						<input
+							type="number"
+							min="0"
+							max={buffer?.duration ?? 0}
+							step="0.01"
+							value={start}
+							onChange={(event) => setStart(event.currentTarget.valueAsNumber)}
+						/>
+					</label>
+					<label>
+						End (seconds)
+						<input
+							type="number"
+							min="0"
+							max={buffer?.duration ?? 0}
+							step="0.01"
+							value={end}
+							onChange={(event) => setEnd(event.currentTarget.valueAsNumber)}
+						/>
+					</label>
+				</div>
+			</details>
 			<div className="sample-actions">
 				<button disabled={!buffer || busy} onClick={() => void perform(false)}>
 					Preview edit
@@ -205,6 +274,10 @@ export function SampleEditor({
 					controls
 					src={preview}
 					aria-label="Edited sample preview"
+					onTimeUpdate={(event) =>
+						setPlayhead(start + event.currentTarget.currentTime * speed)
+					}
+					onEnded={() => setPlayhead(null)}
 				/>
 			)}
 			<p role="status" className="sample-status">
