@@ -2,58 +2,25 @@
 
 ## Requirements
 
-- Go 1.27.x
-- Node.js 26.x and npm 12.2.2
-- Docker Desktop with Compose
-- `kubectl` with Kustomize support for manifest validation
-- Playwright Chromium for browser tests
+- Node.js 26 and npm 12.2.2
+- Docker for the nginx-served app and deployment-header smoke
+- kubectl for optional Kubernetes manifest validation
 
-## Repository layout
+No API, database, environment passwords, or server media directory is required.
 
-```text
-backend/              Go API, migrations, catalog, and tests
-web/                  React studio, audio engine, unit tests, and Playwright tests
-deploy/k8s/           base, local, GitOps, media, and access manifests
-deploy/argocd/        Argo CD project, application, and local service
-.github/workflows/    CI, delivery, and release publishing
-docs/                 architecture, API, operations, and setup guides
-```
-
-## Run the complete stack
+## Run the studio
 
 ```bash
-cp .env.example .env
-# Set unique MYSQL_PASSWORD and MYSQL_ROOT_PASSWORD values.
-docker compose up --build
-```
-
-The web UI is on port 8080, the API is also published directly on 8081 for
-debugging, and MySQL is published on 3307. All published Compose ports bind to
-`127.0.0.1`.
-
-```bash
+docker compose up --build -d
 docker compose ps
-docker compose logs -f db migrate api web
 curl --fail http://localhost:8080/health/web
-curl --fail http://localhost:8080/api/v1/catalog
 ```
 
-## Run services natively
+Open <http://localhost:8080>. Microphone recording requests browser permission;
+use localhost or HTTPS. Stop the frontend with `docker compose down`.
+Do not use volume deletion or orphan removal while retaining old deployment data.
 
-The easiest development database is the Compose `db` service:
-
-```bash
-docker compose up -d db
-cd backend
-DATABASE_DSN='bedlam_like_music:<password>@tcp(127.0.0.1:3307)/bedlam_like_music?parseTime=true' \
-  go run ./cmd/server migrate
-DATABASE_DSN='bedlam_like_music:<password>@tcp(127.0.0.1:3307)/bedlam_like_music?parseTime=true' \
-APP_ORIGIN='http://127.0.0.1:5173' \
-MEDIA_DIR='../assets' \
-  go run ./cmd/server
-```
-
-In another terminal:
+For frontend development:
 
 ```bash
 cd web
@@ -61,86 +28,77 @@ npm ci
 npm run dev
 ```
 
-## Test matrix
+Vite runs at <http://127.0.0.1:5173>. This is a different browser origin from the
+Compose/test URL, so it has its own local library.
 
-### Backend
+## Repository layout
 
-```bash
-cd backend
-test -z "$(gofmt -l .)"
-go vet ./...
-go test ./...
-go test -race ./...
-go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+```text
+web/                  browser studio, audio engine, tests, nginx image
+deploy/k8s/           frontend base and environment overlays
+deploy/argocd/        isolated test and production-rehearsal Argo CD
+deploy/observability/ optional Prometheus, Grafana, and web probes
+scripts/              check/image selection and cluster bootstrap
+docs/                 product, development, deployment, and operations guides
 ```
 
-Database integration tests run when `TEST_MYSQL_DSN` points to a reachable
-MySQL instance. CI supplies its own MySQL service.
+## Checks
 
-### Frontend
+From `web`:
 
 ```bash
-cd web
-npm ci
 npm run lint
 npm test
 npm run build
-npm audit
 ```
 
-Biome checks correctness, suspicious-code, and security rules. TypeScript still
-performs type checking during `npm run build`; these are complementary checks.
+Unit tests cover pure audio/data logic in Node. Browser tests cover actual
+audio APIs, persistence, and user journeys using generated signals.
 
-### Browser
+Against a running Vite server:
 
 ```bash
-docker compose up --build -d
-cd web
-npx playwright install --with-deps chromium
-npm run test:e2e
+E2E_BASE_URL=http://127.0.0.1:5173 npx playwright test e2e/synth.spec.ts
 ```
 
-Studio browser tests use generated audio and a simulated microphone. Focused
-studio changes run their selected Chromium journeys against Vite without Go or
-MySQL. Shared changes and pull requests to `master` use the full browser job,
-which starts the API and a MySQL service. See [CI/CD](github-actions.md) for
-the selection rules. No copyrighted fixture is stored in Git.
-
-### Kubernetes manifests
+Against the nginx-served app, run all journeys including native recording:
 
 ```bash
-kubectl kustomize deploy/k8s/base >/tmp/like-base.yaml
-cp deploy/k8s/local/secrets.env.example deploy/k8s/local/secrets.env
-kubectl kustomize deploy/k8s/local >/tmp/like-local.yaml
-kubectl kustomize deploy/k8s/test >/tmp/like-gitops.yaml
-kubectl kustomize deploy/argocd >/tmp/like-argocd.yaml
+DEPLOYED_AUDIO_SMOKE=1 E2E_BASE_URL=http://localhost:8080 npm run test:e2e
 ```
 
-Never commit `deploy/k8s/local/secrets.env` with real values.
+The native recording smoke uses a fake audio device, without replacing
+getUserMedia or MediaRecorder. It verifies original/edited playback and save/reload.
+Other recording tests use mocks for deterministic analysis behavior.
 
-Rendering proves that Kustomize input is valid; it does not install Argo CD or
-publish images. For an optional manual cluster smoke test, build the local
-images before applying the local overlay:
+## Studio workflow
+
+Samples, Synthesizer, and Music theory share navigation and themes. Sample
+imports validate decodability and summarize batch errors. The editor opens one
+sound; use Add samples for multiple library files.
+
+The synth plays chords. Choose Record phrase, play, Stop phrase, then Add phrase
+to editor and save a copy. Each saved take is separate. The note selector exports
+one selected note. Takes capture timings and patch snapshots for at most 30
+seconds/128 note events. Blur or a hidden tab stops capture. Unsaved takes remain
+session-only; save them before leaving the synth.
+
+## Kubernetes manifests
 
 ```bash
-docker build -f backend/Dockerfile -t bedlam-like-music-api:local .
+for overlay in base local test production; do
+  kubectl kustomize "deploy/k8s/$overlay" > "/tmp/$overlay.yaml"
+done
+kubectl kustomize deploy/argocd > /tmp/argocd.yaml
+kubectl kustomize deploy/argocd/production-template > /tmp/argocd-production.yaml
+kubectl kustomize deploy/observability > /tmp/observability.yaml
+```
+
+For an optional manual local smoke:
+
+```bash
 docker build -f web/Dockerfile -t bedlam-like-music-web:local .
 kubectl apply -k deploy/k8s/local
-kubectl apply -f deploy/k8s/migration-job.yaml
 ```
 
-Use [the Argo CD guide](argo-cd.md) for the persistent GitOps deployment. Do
-not manually apply the GitOps overlay: Argo CD owns it and obtains its exact
-image tags from `deploy/test`.
-
-## Change workflow
-
-1. Branch from current `development`.
-2. Keep changes scoped and use conventional commit messages.
-3. Run the relevant checks locally.
-4. Open a pull request; do not push changes directly to `development`.
-5. Merge only after required checks pass.
-6. Verify the post-merge test, image promotion, and Argo CD sync.
-
-For the current three-node topology and production promotion rules, see
-[deployment environments](deployment-environments.md) and [CI/CD](github-actions.md).
+Normal delivery uses [Argo CD](argo-cd.md); do not manually apply GitOps overlays.

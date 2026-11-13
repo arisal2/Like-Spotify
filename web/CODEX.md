@@ -4,20 +4,22 @@ Read the repository-root `CODEX.md` first.
 
 ## Responsibility
 
+Current studio: browser-only sample library/editor/mixer, polyphonic synthesis,
+bounded phrase recording and WAV rendering, and music theory. Samples persist in
+IndexedDB; unsaved phrase events remain session-only. The unused legacy player/Go/MySQL stack is removed under STUDIO-CLEANUP-001. Do not add server dependencies for these features.
+
 The React application provides Listen, Library, Sound Lab, Theory, Compose,
 and Projects as staged capabilities in one coherent product.
 
 ## Current foundation to preserve
 
-- React, TypeScript, Vite, React Router, TanStack Query, and Zod.
-- Existing player behavior: queue, seek, repeat, shuffle, volume, playback
-  recovery, playlists, history, and account-scoped state.
+- React, TypeScript, Vite, React Router, and Zod.
+- Current synth, sample editor/mixer, phrase recording, theory, and local persistence.
 - Vitest and Playwright tests, including generated disposable audio.
 
 ## Studio direction
 
-- Keep ordinary music playback on the existing player while introducing a
-  separately managed Web Audio engine for synthesis and precise preview.
+- Keep synthesis and precise audio preview inside project-owned Web Audio adapters.
 - Use native Web Audio as the boundary. Tone.js and wavesurfer.js must sit
   behind project-owned adapters and must not define the saved project schema.
 - Use `AudioWorklet` for necessary custom real-time DSP,
@@ -25,8 +27,7 @@ and Projects as staged capabilities in one coherent product.
   non-real-time processing.
 - Model editor changes as commands so undo, redo, autosave, and recovery share
   one predictable state transition path.
-- Keep server state in TanStack Query; do not put real-time playback or editor
-  state in its cache.
+- Keep real-time audio nodes outside React state; no server-state cache is required.
 
 ## Design and accessibility
 

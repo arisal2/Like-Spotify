@@ -47,3 +47,11 @@ and canonical server rendering remain outside this prototype.
 - Date: 2026-11-10
 - Producer decision: One Docker Desktop control plane, one test worker, and one production worker; separate namespaces and two Argo CD instances. Create development and master source branches.
 - Consequences: Dedicated scheduling and namespace RBAC; shared host/control-plane failure domain. Production promotion reuses the test image set. Public production hosting remains outside this local topology.
+
+## DEC-012: Frontend-only studio and legacy retirement
+
+- Status: Approved
+- Date: 2026-11-13
+- Producer decision: Remove unused Go, MySQL, and legacy player infrastructure after the browser repairs; do not retain services for hypothetical future work.
+- Consequences: Browser-local samples and settings remain the persistence boundary. CI/CD publishes only web. Existing media, backups, volumes, and retired credentials are preserved separately; no live data deletion is authorized. The media PVC is deliberately retained against GitOps pruning.
+- Follow-up: STUDIO-CLEANUP-001. Any future accounts, remote project sync, or render service needs a separate concrete product requirement.

@@ -4,14 +4,6 @@ namespace: bedlam-like-music
 resources:
   - ../base
   - ../local-access
-secretGenerator:
-  - name: app-secrets
-    envs:
-      - secrets.env
-generatorOptions:
-  disableNameSuffixHash: true
 replicas:
-  - name: api
-    count: 1
   - name: web
     count: 1

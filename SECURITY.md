@@ -17,12 +17,12 @@ the maintainer for a private contact channel.
 
 ## Deployment baseline
 
-- Terminate TLS before the web service and set `APP_ENV=production`,
-  `APP_ORIGIN=https://your-domain`, and `COOKIE_SECURE=true`.
-- Keep Kubernetes secrets outside Git and rotate database and API credentials
-  after any suspected exposure.
+- Terminate TLS before the frontend for external access; microphone recording
+  requires a secure browser context.
+- Keep image-pull and Argo CD credentials outside Git. The studio itself requires
+  no server credentials; handle retired credentials separately.
 - Use a CNI that enforces Kubernetes `NetworkPolicy`; the manifests default-deny
-  traffic and permit only the required web, API, database, DNS, and AI paths.
+  traffic and permit only inbound frontend HTTP; the frontend server needs no egress.
 - Run the GitOps overlay with immutable commit-SHA image tags and retain the CI
   vulnerability, secret, and misconfiguration scans as required checks.
 - Apply the restricted Pod Security Standard and do not grant workloads RBAC,
