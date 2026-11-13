@@ -120,6 +120,7 @@ test("render a synth note into the sample editor and save it", async ({
 			return maximum;
 		});
 	expect(peak).toBeGreaterThan(0.001);
+	await page.getByText("Precise trim").click();
 	await page.getByLabel("End (seconds)").fill("0.4");
 	await page.getByRole("button", { name: "Preview edit" }).click();
 	await expect(page.getByLabel("Edited sample preview")).toBeVisible();

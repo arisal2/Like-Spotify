@@ -1,6 +1,6 @@
 # Studio guide
 
-Bedlam-Like-Music runs synthesis, recording, and sample editing in your browser. Start the application using the [quick start](../README.md#get-started), then choose a workspace from the studio.
+Bedlam-Like-Music runs synthesis, recording, and sample editing in your browser. Start the application using the [quick start](development.md#run-the-complete-stack), then choose a workspace from the studio.
 
 ## Synthesizer
 
@@ -14,7 +14,7 @@ To turn a patch into editable audio, select a note and note length, then click *
 
 On the sample library page, choose **Add samples** to import audio files of up to 20 MB each. Create an album and add its first sample to persist it. Use each track's play, volume, pan, and mute controls, or **Play mix** to start all unmuted samples in the album together. Mixer settings take effect the next time playback starts.
 
-Choose **Edit** on a library sample, or record a sound to open its copy in the editor. Listen to the original, set start and end times, adjust level and speed, then preview or save a new WAV copy. Saving does not overwrite the source. The current mixer does not provide a multitrack timeline, arrangement, or full-mix export.
+Choose **Edit** on a library sample, or record a sound to open its copy in the editor. Drag the IN and OUT markers on the waveform to trim; use arrow keys on a marker or open **Precise trim** to enter times. Drop another audio file onto the editor to open it there. Listen to the original, adjust level and speed, then preview or save a new WAV copy. Saving does not overwrite the source. The current mixer does not provide a multitrack timeline, arrangement, or full-mix export.
 
 ## Record and match a sound
 

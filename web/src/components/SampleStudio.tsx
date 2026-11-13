@@ -229,6 +229,9 @@ export function SampleStudio() {
 							<SampleEditor
 								key={editorInput.name + String(editorInput.audio.size)}
 								input={editorInput}
+								onReplace={(file) =>
+									setEditorInput({ audio: file, name: file.name })
+								}
 								onClose={() => setEditorInput(null)}
 								onSave={async (audio, name) => {
 									const sample: Sample = {

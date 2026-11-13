@@ -13,7 +13,7 @@ while IFS= read -r path; do
       synth=true ;;
     web/src/components/SampleStudio.tsx|web/src/components/sampleStudio.css)
       synth=true; samples=true; sound_match=true; theory=true ;;
-    web/src/components/SampleEditor.tsx)
+    web/src/components/SampleEditor.tsx|web/src/components/WaveformTimeline.tsx)
       synth=true; samples=true; sound_match=true ;;
     web/src/audio/soundMatch.ts|web/src/audio/soundMatch.test.ts|web/src/components/SoundMatcher.tsx|web/e2e/sound-match.spec.ts)
       sound_match=true ;;

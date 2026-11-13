@@ -12,6 +12,7 @@ check $'browser_mode=studio\nbrowser_specs=e2e/synth.spec.ts e2e/samples.spec.ts
 check $'browser_mode=studio\nbrowser_specs=e2e/synth.spec.ts e2e/samples.spec.ts e2e/sound-match.spec.ts e2e/theory.spec.ts' 'web/src/components/SampleStudio.tsx'
 check $'browser_mode=studio\nbrowser_specs=e2e/sound-match.spec.ts' 'web/src/audio/soundMatch.ts'
 check $'browser_mode=studio\nbrowser_specs=e2e/synth.spec.ts e2e/samples.spec.ts e2e/sound-match.spec.ts' 'web/src/components/SampleEditor.tsx'
+check $'browser_mode=studio\nbrowser_specs=e2e/synth.spec.ts e2e/samples.spec.ts e2e/sound-match.spec.ts' 'web/src/components/WaveformTimeline.tsx'
 check $'browser_mode=studio\nbrowser_specs=e2e/theory.spec.ts' 'web/src/audio/musicTheory.ts'
 check $'browser_mode=full\nbrowser_specs=' 'web/src/main.tsx'
 check $'browser_mode=full\nbrowser_specs=' 'backend/internal/httpapi/server.go'

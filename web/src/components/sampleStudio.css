@@ -115,6 +115,139 @@
 	color: var(--studio-muted);
 	font-size: 13px;
 }
+.sample-editor {
+	background: var(--studio-panel);
+	border: 1px solid #ffffff25;
+	border-radius: 16px;
+	padding: clamp(20px, 3vw, 32px);
+	margin: 24px 0;
+}
+.editor-header-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px;
+}
+.editor-open {
+	cursor: pointer;
+	color: var(--accent);
+}
+.editor-open input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+.editor-open:focus-within {
+	outline: 2px solid var(--accent);
+	outline-offset: 4px;
+}
+.editor-precise {
+	margin: 12px 0 20px;
+	color: var(--studio-muted);
+}
+.editor-precise summary {
+	color: var(--accent);
+	cursor: pointer;
+}
+.waveform-workspace {
+	margin: 26px 0 8px;
+}
+.waveform-ruler,
+.waveform-times {
+	display: flex;
+	justify-content: space-between;
+	color: var(--studio-muted);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+.waveform-ruler {
+	margin-bottom: 8px;
+}
+.waveform-track {
+	position: relative;
+	height: 180px;
+	background: var(--studio-bg);
+	border: 1px solid #ffffff25;
+	border-radius: 8px;
+	overflow: visible;
+	touch-action: none;
+}
+.waveform-track canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: inherit;
+}
+.waveform-excluded {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	background: #0009;
+	pointer-events: none;
+}
+.waveform-selection {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	border-block: 2px solid var(--accent);
+	pointer-events: none;
+}
+.waveform-playhead {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background: #fff;
+	pointer-events: none;
+	z-index: 2;
+}
+.waveform-handle {
+	position: absolute;
+	top: -1px;
+	bottom: -1px;
+	width: 28px;
+	z-index: 3;
+	transform: translateX(-50%);
+	padding: 0;
+	border: 0;
+	background: transparent;
+	touch-action: none;
+	cursor: ew-resize;
+}
+.waveform-handle::before {
+	content: "";
+	position: absolute;
+	inset: 0 calc(50% - 2px);
+	background: var(--accent);
+}
+.waveform-handle span {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	background: var(--accent);
+	color: var(--studio-ink);
+	border-radius: 0 0 4px 4px;
+	font-size: 10px;
+	font-weight: 800;
+	padding: 3px 5px;
+}
+.waveform-handle:focus-visible {
+	outline: 2px solid #fff;
+	outline-offset: 2px;
+}
+.waveform-times {
+	margin-top: 10px;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.waveform-help {
+	margin-top: 8px;
+	color: var(--studio-muted);
+	font-size: 12px;
+}
 .synth-keyboard-panel .synth-keys {
 	display: grid;
 	grid-template-columns: repeat(12, minmax(0, 1fr));
