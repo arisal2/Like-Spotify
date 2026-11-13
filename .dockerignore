@@ -1,14 +1,12 @@
 .git
 .env
 .env.*
-!.env.example
 **/node_modules
 **/dist
 **/test-results
 **/playwright-report
 **/*.test.ts
 **/*.test.tsx
-**/*_test.go
 .codex
 .agents
 assets

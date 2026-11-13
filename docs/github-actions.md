@@ -1,83 +1,69 @@
 # GitHub Actions and GitOps setup
 
-This repository is a local deployment-practice lab with two source branches and
-two automation-owned GitOps branches:
+Two source branches feed separate automation-owned deployment branches:
 
 ```text
-feature → PR → development → CI → deploy/test → test Argo CD
-                    │
-                    └── verify test → PR → master → CI → deploy/production
-                                                        → production-rehearsal Argo CD
+feature → development → CI → deploy/test → test Argo CD
+              └── reviewed promotion → master → CI → deploy/production
+                                                   → production-rehearsal Argo CD
 ```
 
-| Source branch | GitOps branch       | Kustomize overlay       | Local endpoint          |
-| ------------- | ------------------- | ----------------------- | ----------------------- |
-| `development` | `deploy/test`       | `deploy/k8s/test`       | `http://localhost:8080` |
-| `master`      | `deploy/production` | `deploy/k8s/production` | `http://localhost:8083` |
+| Source      | GitOps branch     | Overlay               |
+| ----------- | ----------------- | --------------------- |
+| development | deploy/test       | deploy/k8s/test       |
+| master      | deploy/production | deploy/k8s/production |
 
-`deploy/test` and `deploy/production` are automation-owned desired-state
-branches. Do not develop or merge feature work directly into them.
+## Repository setup
 
-## Required repository configuration
+1. Protect development and master with PRs and the required `ci-gate`.
+2. Allow Actions repository-content and GHCR writes for delivery.
+3. Permit the automation bot to update GitOps branches; do not develop there.
+4. Make the frontend GHCR package readable, or configure pull credentials in
+   both application namespaces.
+5. Review [Argo CD activation](argo-cd.md) and existing-volume retention before
+   deploying the backend-retirement revision.
 
-1. Protect `development` and `master`: require pull requests and the
-   `ci-gate` check; block force pushes and deletion.
-2. Allow Actions to write repository contents and GHCR packages so delivery
-   can update the two GitOps branches.
-3. Do not protect the GitOps branches in a way that blocks
-   `github-actions[bot]`; prohibit ordinary direct pushes instead.
-4. Make GHCR packages readable from Docker Desktop, or configure scoped image
-   pull secrets for both application namespaces.
+## Selected checks
 
-## Delivery behavior
+Frontend changes run lint, Node unit tests, build, and npm audit. Explicit studio
+paths select focused browser journeys against Vite. Shared/unknown frontend
+paths and PRs to master run all journeys against nginx, including the native
+fake-device recording smoke. Neither browser path starts an API or database.
 
-After a successful push CI run, delivery compares the source revision with the
-`.delivery-source` marker in that environment’s last GitOps revision. It builds
-only API or web images whose source changed; unchanged components retain their
-previous immutable commit-SHA tag. Each delivery writes the complete desired
-state and records the tested source revision.
+Kubernetes changes render all application/Argo/observability overlays.
+Configuration security scans use Trivy; PRs also run dependency review.
+Documentation changes check Markdown formatting. The gate rejects a selected
+check that was skipped or failed.
 
-The API image is rebuilt for `backend/` changes and the web image for `web/`
-changes. A `.dockerignore` change rebuilds both; CI scripts and workflow-only
-changes do not change either image. The first delivery (or a deployment branch
-without a usable source marker) builds both. If the remote cannot be inspected,
-delivery fails instead of treating the failure as a first deployment.
+Keep `scripts/select-studio-tests.sh` and its tests current when files move.
+The full nginx browser job mounts the built assets/config into an unprivileged
+nginx container, avoiding another Node image build just to run browser tests.
 
-The Docker Desktop workers are ARM64. Delivery uses an ARM64 runner and
-publishes `linux/arm64` images. Pull-request container validation remains a
-separate AMD64 build check.
+## Image selection and promotion
 
-## Before the next feature
+Only the web image is published. Delivery compares the source to the environment's
+last `.delivery-source` marker; `web/` or `.dockerignore` changes build a new
+image. Documentation, manifests, and workflow-only changes reuse the prior
+immutable frontend SHA. A fresh environment builds the frontend image.
+Failure to inspect the remote fails delivery rather than guessing its state.
 
-1. Merge feature work into `development`.
-2. Confirm `deploy/test` is Synced and Healthy in test Argo CD, then smoke-test
-   `http://localhost:8080`.
-3. Merge the reviewed change from `development` into `master`.
-4. Confirm `deploy/production` is Synced and Healthy in production-rehearsal
-   Argo CD, then smoke-test `http://localhost:8083`.
+Delivery runs after successful CI on development/master, pins the selected SHA
+in the corresponding overlay, records the tested source, and updates its GitOps
+branch. Stale runs do not overwrite a newer source revision.
+The existing local rehearsal builds changed frontend source independently on
+each source branch; it does not guarantee promotion of the identical tested
+artifact between branches.
 
-CI success verifies the build and tests; it does not by itself verify local
-Argo reconciliation. Use the application and endpoint checks above.
-
-## Browser test selection
-
-Synth-only and sample-studio-only changes run their selected Chromium journeys
-against Vite without starting the Go API or MySQL. Changes to both run both
-journeys; changes to the shared studio shell also run both. Other shared
-frontend files, backend code, workflow configuration, and
-unknown frontend paths fall back to the full browser suite with its existing
-API and database setup. Pull requests to `master` always run that full suite.
-Frontend changes still run the complete unit suite, lint, and build. The
-`ci-gate` requires every selected job to succeed, including the selected
-browser job; a skipped selected job fails the gate.
-
-Maintain the explicit paths and tests in `scripts/select-studio-tests.sh` and
-`scripts/test-select-studio-tests.sh` when adding or moving studio files. New
-paths default to the full suite until deliberately classified.
+Workers are ARM64: routine delivery uses an ARM64 runner. PR container builds
+validate AMD64; tagged releases publish both architectures. API images are no
+longer built or required, including when upgrading an old two-image GitOps branch.
 
 ## Dependency protection
 
-Pull requests run dependency review, npm audit, `govulncheck`, and Trivy.
-Dependabot tracks Go, npm, Docker, and GitHub Actions dependencies. The two
-official MIT-licensed Actions with missing dependency-graph license metadata
-are package-specific exceptions; do not broaden that allow-list.
+Dependabot tracks npm, frontend Docker, and GitHub Actions. Go dependency jobs
+have been removed with the backend. Preserve npm audit, dependency review, and
+Trivy checks. The two official MIT Actions with missing license metadata remain
+package-specific exceptions.
+
+CI success is not proof of local Argo health. Check test manually before
+promoting to master, using the [environment guide](deployment-environments.md).

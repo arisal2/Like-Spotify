@@ -48,3 +48,13 @@ export const saveSample = (sample: Sample) =>
 	transaction("readwrite", (store) => store.put(sample));
 export const deleteSample = (id: string) =>
 	transaction("readwrite", (store) => store.delete(id));
+
+export type MixChange = Partial<Pick<Sample, "volume" | "pan" | "muted">>;
+export const updateSampleMix = (id: string, change: MixChange) =>
+	transaction("readwrite", (store) => {
+		const request = store.get(id);
+		request.onsuccess = () => {
+			if (request.result) store.put({ ...request.result, ...change });
+		};
+		return request;
+	});

@@ -9,11 +9,11 @@ sound_match=false
 theory=false
 while IFS= read -r path; do
   case "$path" in
-    web/src/audio/synthEngine.ts|web/src/audio/synthEngine.test.ts|web/src/audio/synthPatch.ts|web/src/audio/synthPatch.test.ts|web/src/components/SynthStudio.tsx|web/e2e/synth.spec.ts)
+    web/src/audio/synthEngine.ts|web/src/audio/synthEngine.test.ts|web/src/audio/synthPatch.ts|web/src/audio/synthPatch.test.ts|web/src/audio/synthPhrase.ts|web/src/audio/synthPhrase.test.ts|web/src/hooks/useSynthPerformance.ts|web/src/components/SynthStudio.tsx|web/e2e/synth.spec.ts)
       synth=true ;;
     web/src/components/SampleStudio.tsx|web/src/components/sampleStudio.css)
       synth=true; samples=true; sound_match=true; theory=true ;;
-    web/src/components/SampleEditor.tsx)
+    web/src/components/SampleEditor.tsx|web/src/components/WaveformTimeline.tsx|web/src/audio/audioFile.ts)
       synth=true; samples=true; sound_match=true ;;
     web/src/audio/soundMatch.ts|web/src/audio/soundMatch.test.ts|web/src/components/SoundMatcher.tsx|web/e2e/sound-match.spec.ts)
       sound_match=true ;;
@@ -23,7 +23,7 @@ while IFS= read -r path; do
       theory=true ;;
     scripts/select-studio-tests.sh|scripts/test-select-studio-tests.sh|scripts/select-delivery-images.sh|scripts/test-select-delivery-images.sh)
       ;;
-    web/*|backend/*|.github/workflows/*|scripts/*|.dockerignore|compose.yaml|.env.example|.github/dependabot.yml)
+    web/*|.github/workflows/*|scripts/*|.dockerignore|compose.yaml|.github/dependabot.yml)
       full=true ;;
   esac
 done
